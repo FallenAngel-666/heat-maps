@@ -1,11 +1,12 @@
 import React from 'react';
-import { Radio, ChevronRight, Activity, ShieldAlert, Cpu } from 'lucide-react';
+import { Radio, ChevronRight, Activity, ShieldAlert, Cpu, Terminal } from 'lucide-react';
 import { DeviceIntelligencePayload } from '../../types';
 
 interface DeviceIntelligenceMapToggleProps {
   isEnabled: boolean;
   onToggle: () => void;
   onOpenDashboard: () => void;
+  onOpenConsole?: () => void;
   data: DeviceIntelligencePayload;
   isBackendConnected: boolean;
 }
@@ -14,6 +15,7 @@ export const DeviceIntelligenceMapToggle: React.FC<DeviceIntelligenceMapTogglePr
   isEnabled,
   onToggle,
   onOpenDashboard,
+  onOpenConsole,
   data,
   isBackendConnected
 }) => {
@@ -61,7 +63,7 @@ export const DeviceIntelligenceMapToggle: React.FC<DeviceIntelligenceMapTogglePr
                 <span className="text-red-400 font-mono font-extrabold text-xs">
                   {count} BLE {count === 1 ? 'Device' : 'Devices'}
                 </span>
-                <span className="text-slate-500">•</span>
+                <span className="text-slate-500">?</span>
                 <span className={`capitalize font-semibold text-[10px] px-1.5 py-0.2 rounded ${
                   data.density_status === 'congested' ? 'bg-red-900/60 text-red-300' :
                   data.density_status === 'high' ? 'bg-red-900/40 text-red-300' :
@@ -96,6 +98,19 @@ export const DeviceIntelligenceMapToggle: React.FC<DeviceIntelligenceMapTogglePr
           </button>
         </div>
 
+        {/* Live Terminal Console Quick Button */}
+        {isEnabled && (
+          <button
+            onClick={onOpenConsole || onOpenDashboard}
+            title="Open Live BLE Packet Sniffer Console"
+            className="p-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-400 hover:text-sky-300 border border-slate-700/60 transition-colors flex items-center gap-1 text-[11px] font-mono font-bold"
+          >
+            <Terminal className="w-3.5 h-3.5" />
+            <span>Console</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          </button>
+        )}
+
         {/* Open Details Dashboard Arrow */}
         {isEnabled && (
           <button
@@ -124,12 +139,13 @@ export const DeviceIntelligenceMapToggle: React.FC<DeviceIntelligenceMapTogglePr
               </>
             )}
           </span>
-          <span className="text-slate-600">•</span>
+          <span className="text-slate-600">?</span>
           <button
-            onClick={onOpenDashboard}
-            className="text-sky-400 hover:text-sky-300 underline font-medium"
+            onClick={onOpenConsole || onOpenDashboard}
+            className="text-sky-400 hover:text-sky-300 underline font-medium flex items-center gap-1"
           >
-            Density Intelligence Panel →
+            <Terminal className="w-3 h-3" />
+            <span>Live Console Stream +'</span>
           </button>
         </div>
       )}

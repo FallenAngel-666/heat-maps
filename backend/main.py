@@ -62,6 +62,7 @@ async def root():
         "api_docs": "/docs",
         "endpoints": {
             "status": "/api/device-intelligence/status",
+            "logs": "/api/device-intelligence/logs",
             "zones": "/api/device-intelligence/zones",
             "set_mode": "/api/device-intelligence/mode"
         }
@@ -73,9 +74,22 @@ async def get_device_intelligence_status():
     """
     Primary API endpoint required by CampusOps frontend:
     Returns scanner status, detected devices in 60s sliding window, sensor zone telemetry,
-    and density estimation.
+    density estimation, and recent live packet detection logs.
     """
     return ble_manager.get_status_payload()
+
+
+@app.get("/api/device-intelligence/logs")
+async def get_device_logs(limit: int = 50):
+    """Returns streaming packet event logs for the web terminal console."""
+    logs = ble_manager.get_recent_logs(limit=limit)
+    return {
+        "status": "ok",
+        "scanner_status": ble_manager.scanner_status,
+        "mode": ble_manager.mode,
+        "count": len(logs),
+        "logs": logs
+    }
 
 
 @app.get("/api/device-intelligence/zones")

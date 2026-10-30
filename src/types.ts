@@ -179,6 +179,18 @@ export interface SensorZoneData {
   density_status: DensityStatus;
 }
 
+export interface BleDetectionLog {
+  id: string;
+  timestamp: string;
+  type: 'discovery' | 'packet' | 'purge' | 'system';
+  anon_id?: string | null;
+  rssi?: number | null;
+  signal_level?: 'strong' | 'moderate' | 'weak';
+  proximity_est?: string;
+  packet_count?: number;
+  message: string;
+}
+
 export interface DeviceSignals {
   avg_rssi: number;
   strong: number;
@@ -199,6 +211,7 @@ export interface DeviceIntelligencePayload {
   primary_sensor: SensorZoneData;
   zones: SensorZoneData[];
   signals: DeviceSignals;
+  recent_logs?: BleDetectionLog[];
   hardware_diagnostics?: {
     adapter_ready: boolean;
     real_hardware_count?: number;

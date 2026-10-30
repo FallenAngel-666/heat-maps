@@ -4,6 +4,49 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function generateDemoLogs(count = 35) {
+  const now = Date.now();
+  const demoZones = [
+    { name: 'Main Academic Wing', id: 'ZONE-MAIN-01' },
+    { name: 'Central Library', id: 'ZONE-LIB-02' },
+    { name: 'BMS Management Quad', id: 'ZONE-BMS-03' },
+    { name: 'Hostel-3 Courtyard', id: 'ZONE-HOST-04' },
+    { name: 'Student Pavilion', id: 'ZONE-CAFE-05' }
+  ];
+
+  const logs = [];
+  for (let i = 0; i < count; i++) {
+    const timeOffset = (count - i) * 1600;
+    const t = new Date(now - timeOffset);
+    const timeStr = t.toTimeString().split(' ')[0] + '.' + String(t.getMilliseconds()).padStart(3, '0');
+    const z = demoZones[Math.floor(Math.random() * demoZones.length)];
+    const hex = Math.random().toString(16).substring(2, 10).toUpperCase() + Math.random().toString(16).substring(2, 6).toUpperCase();
+    const anonId = `DEV-${hex.substring(0, 12)}`;
+    const rssi = getRandomInt(-88, -56);
+    const isStrong = rssi >= -70;
+    const isMod = rssi >= -85;
+    const proximity = isStrong 
+      ? `Nearby Mobile Phone (< 2.5m) [${z.name}]` 
+      : isMod 
+      ? `Mid-Range Mobile Device (2.5m - 8m) [${z.name}]` 
+      : `Peripheral / Wearable (8m - 15m) [${z.name}]`;
+    const isNew = Math.random() < 0.28;
+
+    logs.push({
+      id: `cloud-log-${t.getTime()}-${i}`,
+      timestamp: timeStr,
+      type: isNew ? 'discovery' : 'packet',
+      anon_id: anonId,
+      rssi: rssi,
+      signal_level: isStrong ? 'strong' : isMod ? 'moderate' : 'weak',
+      proximity_est: proximity,
+      packet_count: getRandomInt(1, 14),
+      message: `${isNew ? 'New mobile device discovered' : 'Signal packet received'}: ${anonId} (${rssi} dBm)`
+    });
+  }
+  return logs;
+}
+
 export default function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -66,7 +109,8 @@ export default function handler(req, res) {
       adapter_ready: true,
       real_hardware_count: 0,
       error_details: 'Vercel Cloud Serverless Deployment (Multi-Zone Simulation Active)'
-    }
+    },
+    recent_logs: generateDemoLogs(35)
   };
 
   return res.status(200).json(payload);

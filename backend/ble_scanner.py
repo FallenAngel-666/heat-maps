@@ -1,13 +1,16 @@
 """
 CampusOps - Live Mobile Device Intelligence & Anonymous BLE Detection Module
 Bluetooth Scanner Service using Bleak for Windows 11.
+Includes real-time colorized CMD console streaming and structured web console logs.
 """
 
 import asyncio
+from collections import deque
 import hashlib
 import logging
 import os
 import secrets
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -16,6 +19,27 @@ from typing import Dict, List, Optional, Tuple
 from bleak import BleakScanner
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
+
+# Enable ANSI escape sequence processing on Windows 10/11 CMD / PowerShell
+if os.name == 'nt':
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        pass
+
+# Terminal ANSI Color Constants
+C_RESET = "\033[0m"
+C_BOLD = "\033[1m"
+C_DIM = "\033[2m"
+C_GREEN = "\033[92m"
+C_CYAN = "\033[96m"
+C_YELLOW = "\033[93m"
+C_RED = "\033[91m"
+C_MAGENTA = "\033[95m"
+C_BLUE = "\033[94m"
+C_WHITE = "\033[97m"
 
 logger = logging.getLogger("campusops.ble")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -48,6 +72,8 @@ class AnonymousBLEScannerManager:
     """
     Manages real-time BLE scanning on Windows laptop adapter.
     Preserves strict privacy: MAC addresses and device names are never stored or exposed.
+    Streams colorized packet events to the CMD console and maintains an in-memory
+    log queue for the website's live console tab.
     """
 
     def __init__(self, detection_window_seconds: int = 60):
@@ -58,6 +84,12 @@ class AnonymousBLEScannerManager:
         
         # In-memory anonymous registry: { anon_id: AnonymousDetection }
         self._detections: Dict[str, AnonymousDetection] = {}
+        
+        # In-memory circular buffer for the web terminal console (last 150 events)
+        self._recent_logs: deque = deque(maxlen=150)
+        
+        # Console print throttle per device to prevent flooding the CMD window
+        self._last_console_print: Dict[str, float] = {}
         
         # Scanner runtime state
         self.scanner_status: str = "starting"  # starting, active, offline, error
@@ -101,10 +133,22 @@ class AnonymousBLEScannerManager:
         # Returns a truncated 16-hex-character anonymous identifier
         return f"DEV-{hasher.hexdigest()[:12].upper()}"
 
+    def _format_proximity(self, rssi: int) -> str:
+        """Infers probable physical proximity and device class based on RF signal RSSI."""
+        if rssi >= -65:
+            return "Nearby Mobile Phone (< 2.5m)"
+        elif rssi >= -78:
+            return "Mid-Range Mobile Device (2.5m - 8m)"
+        elif rssi >= -88:
+            return "Peripheral / Wearable (8m - 15m)"
+        else:
+            return "Boundary RF Signal (> 15m)"
+
     def _detection_callback(self, device: BLEDevice, advertisement_data: AdvertisementData) -> None:
         """
         Callback invoked by Bleak whenever a BLE advertisement is captured.
         Extracts only RSSI and updates anonymous timestamp record.
+        Prints real-time colorized logs to CMD and adds to web console buffer.
         """
         now = time.time()
         self.last_scan_time = now
@@ -114,18 +158,68 @@ class AnonymousBLEScannerManager:
         anon_id = self._anonymize_address(device.address)
         rssi = advertisement_data.rssi if advertisement_data.rssi is not None else -90
 
-        if anon_id in self._detections:
+        is_new = anon_id not in self._detections
+        proximity = self._format_proximity(rssi)
+        signal_level = "strong" if rssi >= -70 else "moderate" if rssi >= -85 else "weak"
+        time_str = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+
+        if not is_new:
             rec = self._detections[anon_id]
             rec.last_seen = now
             rec.last_rssi = rssi
             rec.packet_count += 1
+            packet_num = rec.packet_count
         else:
-            self._detections[anon_id] = AnonymousDetection(
+            rec = AnonymousDetection(
                 anon_id=anon_id,
                 first_seen=now,
                 last_seen=now,
                 last_rssi=rssi,
                 packet_count=1
+            )
+            self._detections[anon_id] = rec
+            packet_num = 1
+
+        # Add structured log entry for the web console tab
+        log_entry = {
+            "id": f"log-{int(now * 1000)}-{secrets.token_hex(2)}",
+            "timestamp": time_str,
+            "type": "discovery" if is_new else "packet",
+            "anon_id": anon_id,
+            "rssi": rssi,
+            "signal_level": signal_level,
+            "proximity_est": proximity,
+            "packet_count": packet_num,
+            "message": f"Detected mobile beacon: {anon_id} ({rssi} dBm | {proximity})"
+        }
+        self._recent_logs.append(log_entry)
+
+        # Print colorized stream to CMD console
+        # Always print new discoveries; throttle repeat packet logs per device to 1.5s
+        last_print = self._last_console_print.get(anon_id, 0.0)
+        if is_new or (now - last_print > 1.5):
+            self._last_console_print[anon_id] = now
+            
+            # Format RSSI with appropriate color
+            if rssi >= -70:
+                rssi_str = f"{C_GREEN}{rssi:>3} dBm [STRONG]{C_RESET}"
+            elif rssi >= -85:
+                rssi_str = f"{C_YELLOW}{rssi:>3} dBm [MEDIUM]{C_RESET}"
+            else:
+                rssi_str = f"{C_DIM}{rssi:>3} dBm [WEAK]  {C_RESET}"
+
+            if is_new:
+                tag = f"{C_GREEN}{C_BOLD}[NEW PHONE DISCOVERED]{C_RESET}"
+            else:
+                tag = f"{C_CYAN}[BLE ADVERTISEMENT]  {C_RESET}"
+
+            active_count = len(self._detections)
+            print(
+                f"{C_DIM}[{time_str}]{C_RESET} {tag} "
+                f"{C_WHITE}{C_BOLD}{anon_id}{C_RESET} | "
+                f"RSSI: {rssi_str} | "
+                f"{C_WHITE}{proximity:<32}{C_RESET} | "
+                f"Active in 60s: {C_GREEN}{C_BOLD}{active_count}{C_RESET}"
             )
 
     async def _cleanup_loop(self) -> None:
@@ -140,9 +234,32 @@ class AnonymousBLEScannerManager:
                     expired = [anon_id for anon_id, record in self._detections.items() if record.last_seen < cutoff]
                     for anon_id in expired:
                         del self._detections[anon_id]
+                        if anon_id in self._last_console_print:
+                            del self._last_console_print[anon_id]
 
                     if expired:
-                        logger.debug("Purged %d expired BLE detection(s)", len(expired))
+                        time_str = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        active_count = len(self._detections)
+                        
+                        purge_entry = {
+                            "id": f"log-{int(now * 1000)}-{secrets.token_hex(2)}",
+                            "timestamp": time_str,
+                            "type": "purge",
+                            "anon_id": None,
+                            "rssi": None,
+                            "signal_level": "weak",
+                            "proximity_est": "Sliding Window Expiration",
+                            "packet_count": len(expired),
+                            "message": f"Sliding Window Purge: {len(expired)} inactive device(s) expired (>60s). Remaining active: {active_count}"
+                        }
+                        self._recent_logs.append(purge_entry)
+
+                        print(
+                            f"{C_DIM}[{time_str}]{C_RESET} "
+                            f"{C_RED}{C_BOLD}[SLIDING PURGE 60S]{C_RESET}   "
+                            f"Purged {C_RED}-{len(expired)}{C_RESET} inactive BLE device(s) | "
+                            f"Current Active: {C_GREEN}{C_BOLD}{active_count}{C_RESET}"
+                        )
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -153,6 +270,12 @@ class AnonymousBLEScannerManager:
         retry_delay = 3.0
         while self._is_running:
             try:
+                print(f"\n{C_CYAN}======================================================================{C_RESET}")
+                print(f"{C_GREEN}{C_BOLD}  CAMPUSOPS - LIVE MOBILE DEVICE INTELLIGENCE CONSOLE (Windows 11){C_RESET}")
+                print(f"  Hardware: Built-in Bluetooth Low Energy (BLE) Adapter")
+                print(f"  Sliding Window: {self.detection_window} seconds | Privacy: Ephemeral SHA-256")
+                print(f"{C_CYAN}======================================================================{C_RESET}\n")
+                
                 logger.info("Initializing BleakScanner on Windows Bluetooth adapter...")
                 self.scanner_status = "starting"
                 self.status_message = "Activating laptop Bluetooth Low Energy adapter..."
@@ -164,6 +287,7 @@ class AnonymousBLEScannerManager:
                 self.scanner_status = "active"
                 self.status_message = "Active - Scanning for BLE advertisements in 60s sliding window"
                 logger.info("Bluetooth Low Energy scanner successfully active.")
+                print(f"{C_GREEN}[ONLINE]{C_RESET} BleakScanner listening for nearby mobile devices and BLE beacons...\n")
 
                 # Keep scanner running while self._is_running is True
                 while self._is_running:
@@ -176,6 +300,8 @@ class AnonymousBLEScannerManager:
                 self.scanner_status = "offline"
                 self.status_message = f"Bluetooth adapter offline: {type(e).__name__}"
                 self.error_details = str(e)
+                print(f"\n{C_RED}[ERROR] Bluetooth adapter exception: {e}{C_RESET}")
+                print(f"{C_YELLOW}Retrying in {retry_delay}s... (Ensure Bluetooth is ON in Windows Settings){C_RESET}\n")
                 
                 # Close previous scanner if still open
                 if self._bleak_scanner:
@@ -185,52 +311,57 @@ class AnonymousBLEScannerManager:
                         pass
                     self._bleak_scanner = None
 
-                # Wait before retry attempt if still supposed to run
-                if self._is_running:
-                    logger.info("Retrying Bluetooth scanner startup in %ds...", retry_delay)
-                    await asyncio.sleep(retry_delay)
-                    retry_delay = min(retry_delay * 1.5, 15.0)
+                await asyncio.sleep(retry_delay)
 
     async def start(self) -> None:
-        """Starts the BLE scanner manager."""
-        if self._is_running:
-            return
+        """Starts the BLE scanner and cleanup background tasks."""
+        async with self._lock:
+            if self._is_running:
+                return
 
-        self._is_running = True
-        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        self._scan_task = asyncio.create_task(self._scanner_worker())
-        logger.info("AnonymousBLEScannerManager started.")
+            self._is_running = True
+            self.scanner_status = "starting"
+            self.status_message = "Starting scanner service..."
+            
+            # Start background tasks
+            self._scan_task = asyncio.create_task(self._scanner_worker(), name="ble_scanner_worker")
+            self._cleanup_task = asyncio.create_task(self._cleanup_loop(), name="ble_cleanup_loop")
+            logger.info("AnonymousBLEScannerManager started.")
 
     async def stop(self) -> None:
-        """Stops the BLE scanner gracefully."""
-        self._is_running = False
-        
-        if self._cleanup_task:
-            self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
-            self._cleanup_task = None
+        """Stops the BLE scanner and cleans up resources."""
+        async with self._lock:
+            if not self._is_running:
+                return
 
-        if self._scan_task:
-            self._scan_task.cancel()
-            try:
-                await self._scan_task
-            except asyncio.CancelledError:
-                pass
-            self._scan_task = None
+            self._is_running = False
 
-        if self._bleak_scanner:
-            try:
-                await self._bleak_scanner.stop()
-            except Exception as e:
-                logger.warning("Error stopping bleak scanner: %s", e)
-            self._bleak_scanner = None
+            if self._cleanup_task:
+                self._cleanup_task.cancel()
+                try:
+                    await self._cleanup_task
+                except asyncio.CancelledError:
+                    pass
+                self._cleanup_task = None
 
-        self.scanner_status = "offline"
-        self.status_message = "Scanner stopped"
-        logger.info("AnonymousBLEScannerManager stopped.")
+            if self._scan_task:
+                self._scan_task.cancel()
+                try:
+                    await self._scan_task
+                except asyncio.CancelledError:
+                    pass
+                self._scan_task = None
+
+            if self._bleak_scanner:
+                try:
+                    await self._bleak_scanner.stop()
+                except Exception as e:
+                    logger.warning("Error stopping bleak scanner: %s", e)
+                self._bleak_scanner = None
+
+            self.scanner_status = "offline"
+            self.status_message = "Scanner stopped"
+            logger.info("AnonymousBLEScannerManager stopped.")
 
     def set_mode(self, new_mode: str) -> None:
         """Switches between 'live' and 'demo' mode."""
@@ -249,10 +380,54 @@ class AnonymousBLEScannerManager:
         else:
             return "congested"
 
+    def get_recent_logs(self, limit: int = 50) -> List[dict]:
+        """Returns the most recent detection log entries."""
+        if self.mode == "demo":
+            return self._generate_demo_logs(limit)
+        return list(self._recent_logs)[-limit:]
+
+    def _generate_demo_logs(self, limit: int = 30) -> List[dict]:
+        """Generates realistic simulated packet logs across the 5 campus zones for Demo Mode."""
+        now = time.time()
+        import random
+        demo_zones = [
+            ("ZONE-MAIN-01", "Main Academic Block"),
+            ("ZONE-LIB-02", "Central Library"),
+            ("ZONE-BMS-03", "BMS Management Quad"),
+            ("ZONE-HOST-04", "Hostel-3 Courtyard"),
+            ("ZONE-CAFE-05", "Student Pavilion")
+        ]
+        
+        sim_logs = []
+        for i in range(min(limit, 25)):
+            t_offset = (limit - i) * 1.8
+            t_entry = now - t_offset
+            time_str = datetime.fromtimestamp(t_entry).strftime("%H:%M:%S.%f")[:-3]
+            zid, zname = random.choice(demo_zones)
+            anon_id = f"DEV-{secrets.token_hex(6).upper()}"
+            rssi = random.randint(-88, -58)
+            proximity = self._format_proximity(rssi)
+            signal_level = "strong" if rssi >= -70 else "moderate" if rssi >= -85 else "weak"
+            is_new = random.random() < 0.25
+
+            sim_logs.append({
+                "id": f"sim-log-{int(t_entry * 1000)}-{i}",
+                "timestamp": time_str,
+                "type": "discovery" if is_new else "packet",
+                "anon_id": anon_id,
+                "rssi": rssi,
+                "signal_level": signal_level,
+                "proximity_est": f"{proximity} [{zname}]",
+                "packet_count": random.randint(1, 15),
+                "message": f"Demo Signal: {anon_id} at {zname} ({rssi} dBm)"
+            })
+        return sim_logs
+
     def get_status_payload(self) -> dict:
         """
         Builds the real-time API response payload for the frontend.
-        Ensures strict privacy: only aggregate counts and signal distributions.
+        Ensures strict privacy: only aggregate counts, signal distributions,
+        and anonymous log streams.
         """
         now = time.time()
         cutoff = now - self.detection_window
@@ -358,7 +533,8 @@ class AnonymousBLEScannerManager:
                     "adapter_ready": self.scanner_status == "active",
                     "real_hardware_count": live_count,
                     "real_adapter_status": self.scanner_status
-                }
+                },
+                "recent_logs": self._generate_demo_logs(35)
             }
 
         # LIVE MODE: Pure real data directly from laptop Bluetooth adapter
@@ -401,5 +577,6 @@ class AnonymousBLEScannerManager:
                 "adapter_ready": self.scanner_status == "active",
                 "real_hardware_count": live_count,
                 "error_details": self.error_details
-            }
+            },
+            "recent_logs": list(self._recent_logs)[-50:]
         }

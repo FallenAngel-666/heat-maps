@@ -63,6 +63,7 @@ export const App: React.FC = () => {
   // 5. LIVE DEVICE INTELLIGENCE STATE (Anonymous Bluetooth Device Detection)
   const [isDeviceIntelligenceEnabled, setIsDeviceIntelligenceEnabled] = useState<boolean>(true);
   const [isDeviceIntelligenceDrawerOpen, setIsDeviceIntelligenceDrawerOpen] = useState<boolean>(false);
+  const [deviceDrawerTab, setDeviceDrawerTab] = useState<'telemetry' | 'console'>('telemetry');
 
   // Check if any drawer, modal, or options panel is currently open
   const isAnyDrawerOrModalOpen = useMemo(() => {
