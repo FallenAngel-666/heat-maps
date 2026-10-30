@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDeviceIntelligenceDrawer
 }) => {
   return (
-    <header className="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 md:px-6 flex items-center justify-between z-30 shadow-xs select-none">
+    <header className="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 md:px-6 flex items-center justify-between relative z-50 shadow-xs select-none">
       {/* Brand & Campus Title with 3-Line Hamburger Menu */}
       <div className="flex items-center gap-2 md:gap-3">
         {onOpenNavigation && (

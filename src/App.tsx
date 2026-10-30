@@ -389,8 +389,8 @@ export const App: React.FC = () => {
         onSelectFilter={setHealthFilter}
       />
 
-      {/* 3. Main 3D Canvas Area */}
-      <main className="flex-1 relative w-full h-full overflow-hidden">
+      {/* 3. Main 3D Canvas Area (Strict stacking isolation so 3D labels never overlap top bars/menus) */}
+      <main className="flex-1 relative w-full h-full overflow-hidden isolate z-0">
         {/* Live Device Intelligence Campus Map Toggle (Top-Left) */}
         <DeviceIntelligenceMapToggle
           isEnabled={isDeviceIntelligenceEnabled}
@@ -412,6 +412,7 @@ export const App: React.FC = () => {
           isDeviceIntelligenceActive={isDeviceIntelligenceEnabled}
           deviceIntelligenceZones={deviceData.zones}
           deviceIntelligenceMode={deviceData.mode}
+          isAnyDrawerOpen={isDeviceIntelligenceDrawerOpen || selectedBuildingId !== null || isEventStreamOpen || isBuildingListOpen || isNavDrawerOpen}
           onSelectZone={(zone) => {
             setIsDeviceIntelligenceDrawerOpen(true);
           }}

@@ -1,4 +1,5 @@
 import React, { Suspense } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { ContactShadows, Sky } from '@react-three/drei';
 import { Building, CameraPreset, SensorZoneData, ScannerMode } from '../../types';
@@ -21,6 +22,7 @@ interface CampusSceneProps {
   deviceIntelligenceZones?: SensorZoneData[];
   deviceIntelligenceMode?: ScannerMode;
   onSelectZone?: (zone: SensorZoneData) => void;
+  isAnyDrawerOpen?: boolean;
 }
 
 export const CampusScene: React.FC<CampusSceneProps> = ({
@@ -35,7 +37,8 @@ export const CampusScene: React.FC<CampusSceneProps> = ({
   isDeviceIntelligenceActive = false,
   deviceIntelligenceZones = [],
   deviceIntelligenceMode = 'live',
-  onSelectZone
+  onSelectZone,
+  isAnyDrawerOpen = false
 }) => {
   const selectedBuilding = buildings.find((b) => b.id === selectedBuildingId) || null;
 
@@ -45,39 +48,46 @@ export const CampusScene: React.FC<CampusSceneProps> = ({
         shadows
         camera={{ position: [0, 95, 105], fov: 42, near: 0.5, far: 500 }}
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        gl={{ 
+          antialias: true, 
+          alpha: false, 
+          preserveDrawingBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.16
+        }}
         onPointerMissed={() => onSelectBuilding(null)}
       >
         <color attach="background" args={['#e2e8f0']} />
-        <fog attach="fog" args={['#e2e8f0', 120, 260]} />
+        <fog attach="fog" args={['#e2e8f0', 135, 290]} />
 
-        {/* Ambient & Natural Sun Lighting */}
-        <ambientLight intensity={0.75} />
-        <hemisphereLight args={['#ffffff', '#cbd5e1', 0.6]} />
+        {/* Ambient & Natural Warm Sun Lighting */}
+        <ambientLight intensity={0.65} color="#ffffff" />
+        <hemisphereLight args={['#ffffff', '#94a3b8', 0.6]} />
         <directionalLight
-          position={[60, 90, 50]}
-          intensity={1.2}
+          position={[65, 95, 55]}
+          intensity={1.45}
+          color="#fffaf0"
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
-          shadow-camera-far={250}
-          shadow-camera-left={-90}
-          shadow-camera-right={90}
-          shadow-camera-top={90}
-          shadow-camera-bottom={-90}
-          shadow-bias={-0.0005}
+          shadow-camera-far={260}
+          shadow-camera-left={-100}
+          shadow-camera-right={100}
+          shadow-camera-top={100}
+          shadow-camera-bottom={-100}
+          shadow-bias={-0.0003}
         />
-        {/* Soft fill light from opposite angle */}
-        <directionalLight position={[-60, 40, -50]} intensity={0.4} color="#bae6fd" />
+        {/* Soft sky-bounce fill light from opposite angle */}
+        <directionalLight position={[-60, 45, -50]} intensity={0.5} color="#bae6fd" />
 
-        {/* Clear daytime sky simulation */}
+        {/* Clear daytime sky simulation with realistic atmosphere */}
         <Sky
           distance={450000}
-          sunPosition={[60, 90, 50]}
-          inclination={0.49}
+          sunPosition={[65, 95, 55]}
+          inclination={0.48}
           azimuth={0.25}
-          turbidity={6}
-          rayleigh={0.4}
+          turbidity={5}
+          rayleigh={0.35}
         />
 
         <Suspense fallback={null}>
@@ -113,6 +123,7 @@ export const CampusScene: React.FC<CampusSceneProps> = ({
               onSelect={(id) => onSelectBuilding(id)}
               onHover={(id) => onHoverBuilding(id)}
               showLabels={showLabels}
+              isAnyDrawerOpen={isAnyDrawerOpen}
             />
           ))}
 

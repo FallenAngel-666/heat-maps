@@ -144,12 +144,13 @@ const SensorZoneNode: React.FC<{
         />
       </group>
 
-      {/* 4. High-Visibility Floating 3D Billboard HUD */}
+      {/* 4. High-Visibility Floating 3D Billboard HUD (Properly bounded z-index) */}
       <Html
         position={[0, 4.4, 0]}
         center
-        distanceFactor={65}
-        zIndexRange={[200, 50]}
+        distanceFactor={50}
+        zIndexRange={[10, 0]}
+        occlude
         className="pointer-events-auto select-none"
       >
         <div 

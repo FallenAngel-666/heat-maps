@@ -2085,9 +2085,21 @@
           const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(cesiumViewer.scene, pos);
 
           if (canvasPos && canvasPos.x >= 0 && canvasPos.y >= 0 && canvasPos.x <= window.innerWidth && canvasPos.y <= window.innerHeight) {
-            el.style.left = `${canvasPos.x}px`;
-            el.style.top = `${canvasPos.y}px`;
-            el.style.display = 'flex';
+            const bldgDrawer = document.getElementById('building-drawer');
+            const incDrawer = document.getElementById('incidents-drawer');
+            const isDrawerOpen = (bldgDrawer && !bldgDrawer.classList.contains('translate-x-full')) ||
+                                 (incDrawer && !incDrawer.classList.contains('translate-x-full'));
+            const inHeaderArea = canvasPos.y < 125;
+            const inDrawerArea = isDrawerOpen && canvasPos.x > (window.innerWidth - 490);
+            const inToggleArea = canvasPos.x < 340 && canvasPos.y < 220;
+
+            if (inHeaderArea || inDrawerArea || inToggleArea) {
+              el.style.display = 'none';
+            } else {
+              el.style.left = `${canvasPos.x}px`;
+              el.style.top = `${canvasPos.y}px`;
+              el.style.display = 'flex';
+            }
           } else {
             el.style.display = 'none';
           }

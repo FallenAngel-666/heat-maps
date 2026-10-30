@@ -43,7 +43,7 @@ export const IncidentLogDrawer: React.FC<IncidentLogDrawerProps> = ({
   const resolvedIncidents = incidents.filter((i) => i.status === 'resolved');
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 select-none">
+    <div className="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 select-none">
       {/* Header */}
       <div className="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60">
         <div className="flex items-center gap-2.5">

@@ -58,7 +58,7 @@ export const BuildingListDrawer: React.FC<BuildingListDrawerProps> = ({
   });
 
   return (
-    <div className="fixed inset-y-0 left-0 w-full sm:w-[420px] bg-white/98 backdrop-blur-xl border-r border-slate-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 select-none">
+    <div className="fixed inset-y-0 left-0 w-full sm:w-[420px] bg-white/98 backdrop-blur-xl border-r border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 select-none">
       {/* Drawer Header */}
       <div className="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60">
         <div className="flex items-center gap-2.5">

@@ -35,7 +35,7 @@ export const ViewControls: React.FC<ViewControlsProps> = ({
   onResetCamera
 }) => {
   return (
-    <div className="absolute bottom-6 right-6 z-20 flex flex-col items-end gap-2.5 select-none pointer-events-auto">
+    <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2.5 select-none pointer-events-auto">
       
       {/* 1. Perspectives & Angles Floating Bar */}
       <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-lg flex items-center gap-1">

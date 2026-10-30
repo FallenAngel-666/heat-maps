@@ -22,7 +22,7 @@ export const DeviceIntelligenceMapToggle: React.FC<DeviceIntelligenceMapTogglePr
   const count = data.detected_devices;
 
   return (
-    <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 select-none pointer-events-auto">
+    <div className="absolute top-4 left-4 z-30 flex flex-col gap-2 select-none pointer-events-auto">
       {/* Main Map Integration Card */}
       <div className={`p-2.5 rounded-2xl backdrop-blur-md border shadow-xl transition-all duration-300 flex items-center gap-3 ${
         isEnabled
