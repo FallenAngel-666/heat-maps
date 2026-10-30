@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CampusPulse OS | SRM Easwari Engineering College — Photorealistic 3D Digital Twin</title>
+  <title>CampusPulse OS | SRM Easwari Engineering College — 3D Holographic Digital Twin & Google Satellite</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,10 +11,6 @@
   <!-- Leaflet for High-Resolution Google Maps Satellite View -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- CesiumJS for Google Photorealistic 3D Tiles & Authentic Satellite -->
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 
   <!-- Three.js & OrbitControls for Operational 3D View -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -59,7 +55,7 @@
       -webkit-user-select: none;
       background-color: #f8fafc;
     }
-    #google-satellite-container, #cesium-container, #three-container {
+    #google-satellite-container, #three-container {
       width: 100vw;
       height: 100vh;
       position: absolute;
@@ -76,18 +72,6 @@
     .google-custom-marker {
       background: none;
       border: none;
-    }
-    /* Hide Cesium default widget overlays and default crash modal */
-    .cesium-viewer-bottom {
-      display: none !important;
-    }
-    .cesium-widget-errorPanel {
-      display: none !important;
-    }
-    .cesium-credit-logoContainer, .cesium-credit-textContainer {
-      display: inline-block !important;
-      font-size: 10px !important;
-      color: rgba(255, 255, 255, 0.8) !important;
     }
     /* Custom Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -133,10 +117,7 @@
   <!-- 1. Google Maps Authentic Satellite Viewport (Leaflet + High-Resolution Google Satellite Imagery) -->
   <div id="google-satellite-container"></div>
 
-  <!-- 2. Cesium Container for Photorealistic 3D & 3D Tiles Views -->
-  <div id="cesium-container" style="display: none;"></div>
-
-  <!-- 3. Three.js Container for Operational 3D View -->
+  <!-- 2. Three.js Container for Operational 3D View -->
   <div id="three-container" style="display: none;"></div>
 
   <!-- 3. Screen-Space 3D Operational Labels Layer -->
@@ -167,7 +148,7 @@
               CampusPulse OS
             </h1>
             <span id="active-mode-badge" class="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/70">
-              Photorealistic 3D
+              Google Maps Satellite
             </span>
           </div>
           <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
@@ -181,32 +162,20 @@
         </div>
       </div>
 
-      <!-- CENTER: 3-MODE VIEW SWITCHER -->
+      <!-- CENTER: 2-MODE VIEW SWITCHER -->
       <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
-        <button id="mode-btn-satellite" onclick="switchViewMode('satellite')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5">
+        <button id="mode-btn-satellite" onclick="switchViewMode('satellite')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5">
           <span>🛰️</span>
           <span>Google Satellite</span>
         </button>
-        <button id="mode-btn-operational" onclick="switchViewMode('operational')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+        <button id="mode-btn-operational" onclick="switchViewMode('operational')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
           <span>🏢</span>
-          <span class="hidden md:inline">Holographic 3D</span>
-        </button>
-        <button id="mode-btn-photorealistic" onclick="switchViewMode('photorealistic')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
-          <span>🌍</span>
-          <span class="hidden md:inline">Google 3D Tiles</span>
+          <span>Holographic 3D</span>
         </button>
       </div>
 
       <!-- HEADER ACTIONS -->
       <div class="flex items-center gap-2">
-        <!-- Configure Google API Key -->
-        <button onclick="openApiKeyModal()" title="Configure Google Maps API Key for Photorealistic 3D Tiles" class="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors">
-          <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-          </svg>
-          <span>API Key</span>
-        </button>
-
         <!-- Incident Drawer Toggle -->
         <button onclick="toggleIncidentLog()" class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors relative">
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,28 +194,6 @@
         </button>
       </div>
     </header>
-
-    <!-- WEBGL / HARDWARE ACCELERATION FALLBACK NOTICE BANNER -->
-    <div id="webgl-fallback-banner" class="hidden bg-gradient-to-r from-amber-600 to-amber-500 text-white border-b border-amber-600/80 px-4 md:px-6 py-2.5 flex items-center justify-between text-xs pointer-events-auto shadow-md backdrop-blur-xs select-none z-50">
-      <div class="flex items-center gap-2.5">
-        <span class="text-base leading-none">⚠️</span>
-        <div class="leading-tight">
-          <span class="font-bold">WebGL / Hardware Acceleration Required for Cesium 3D:</span>
-          <span id="webgl-banner-text" class="text-amber-100 ml-1">WebGL is disabled or unavailable in your browser. Switched automatically to <strong>Operational 3D Twin</strong> mode.</span>
-          <button onclick="openWebglHelpModal()" class="ml-2 underline font-semibold text-white hover:text-amber-100 transition-colors">
-            How to fix in Chrome →
-          </button>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button onclick="retryCesiumInit()" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold text-[11px] transition-all">
-          Retry 3D
-        </button>
-        <button onclick="dismissWebglBanner()" title="Dismiss Banner" class="p-1 hover:bg-white/20 rounded-lg text-white transition-all">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-    </div>
 
     <!-- HEALTH METRICS BAR & RAG STATUS PILLS -->
     <div class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs pointer-events-auto select-none shadow-2xs">
@@ -353,7 +300,6 @@
       </div>
       <div class="w-px h-3 bg-slate-300"></div>
       <span id="attribution-text">Imagery ©2026 Google Earth, CNES / Airbus, Maxar Technologies</span>
-      <div id="cesium-credits" class="inline"></div>
     </div>
 
     <!-- BOTTOM-RIGHT: REALISTIC CAMPUS EXPLORATION TOOLBAR -->
@@ -380,7 +326,7 @@
           Top-Down
         </button>
         <!-- 45° Angled 3D View -->
-        <button onclick="setPerspective('oblique')" title="45° Angled Photorealistic 3D View" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+        <button onclick="setPerspective('oblique')" title="45° Angled Isometric 3D View" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
           Angled 3D
         </button>
       </div>
@@ -884,65 +830,6 @@
     </div>
   </aside>
 
-  <!-- WEBGL TROUBLESHOOTING HELP MODAL -->
-  <div id="webgl-help-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
-    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in duration-150">
-      <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-gradient-to-r from-slate-50 to-sky-50/50">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-lg">
-            ⚙️
-          </div>
-          <div>
-            <h3 class="font-bold text-slate-900 text-sm md:text-base">Enable WebGL & 3D Hardware Acceleration</h3>
-            <p class="text-xs text-slate-500">Fix "Error constructing CesiumWidget" in Chrome</p>
-          </div>
-        </div>
-        <button onclick="closeWebglHelpModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <div class="p-5 space-y-4 text-xs text-slate-700">
-        <div class="p-3.5 bg-sky-50 rounded-xl border border-sky-100 flex items-start gap-2.5">
-          <span class="text-sky-600 text-sm mt-0.5">ℹ️</span>
-          <p class="leading-relaxed text-sky-900">
-            CesiumJS requires WebGL to render photorealistic Google 3D tiles and satellite imagery. When Chrome's hardware graphics acceleration is turned off or blocked, this error appears.
-          </p>
-        </div>
-
-        <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Quick 30-Second Fix (Chrome):</h4>
-        
-        <ol class="space-y-2.5 list-decimal list-inside bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <li class="leading-relaxed">
-            Open a new tab and paste: <code class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px] text-sky-700 select-all">chrome://settings/system</code>
-          </li>
-          <li class="leading-relaxed">
-            Turn <strong>ON</strong>: <strong>"Use graphics acceleration when available"</strong>.
-          </li>
-          <li class="leading-relaxed">
-            Click the <strong>"Relaunch"</strong> button that appears next to it.
-          </li>
-          <li class="leading-relaxed">
-            Refresh this page — the photorealistic 3D twin will load immediately!
-          </li>
-        </ol>
-
-        <div class="pt-1 text-slate-500 text-[11px] leading-relaxed">
-          <strong>Tip:</strong> If it still doesn't load after relaunching, visit <code class="px-1 bg-slate-100 rounded font-mono text-slate-700 select-all">chrome://gpu</code> to check your graphics status, or enable <code class="px-1 bg-slate-100 rounded font-mono text-slate-700 select-all">chrome://flags/#ignore-gpu-blocklist</code>.
-        </div>
-      </div>
-
-      <div class="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-end gap-2">
-        <button onclick="closeWebglHelpModal()" class="px-4 py-2 rounded-xl text-slate-700 font-medium hover:bg-slate-200/70 transition-colors">
-          Close
-        </button>
-        <button onclick="retryCesiumInit(); closeWebglHelpModal();" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">
-          Retry 3D Tiles
-        </button>
-      </div>
-    </div>
-  </div>
-
   <!-- INCIDENT REPORTING MODAL -->
   <div id="incident-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in duration-150">
@@ -1027,42 +914,6 @@
           <button type="submit" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">Broadcast & Update 3D Overlay</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- GOOGLE MAPS API KEY CONFIGURATION MODAL -->
-  <div id="apikey-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
-    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in duration-150">
-      <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70">
-        <div>
-          <h3 class="font-bold text-slate-900 text-base">Google Maps Platform 3D Tiles</h3>
-          <p class="text-xs text-slate-500">Configure your API Key for Photorealistic 3D Tiles</p>
-        </div>
-        <button onclick="closeApiKeyModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <div class="p-5 space-y-4 text-xs">
-        <p class="text-slate-600 leading-relaxed">
-          Google Maps Platform's <strong>Map Tiles API</strong> provides high-resolution, textured 3D mesh models of buildings and terrain for major cities including Chennai.
-        </p>
-
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">Google Maps API Key</label>
-          <input type="password" id="input-google-api-key" placeholder="AIzaSy..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500">
-          <p class="text-[11px] text-slate-400 mt-1">Requires <em>Map Tiles API</em> enabled in Google Cloud Console.</p>
-        </div>
-
-        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
-          <strong>Note:</strong> If no API key is provided, CampusPulse OS seamlessly utilizes the high-resolution <strong>Satellite View</strong> and <strong>Operational 3D Digital Twin</strong> with zero interruption.
-        </div>
-
-        <div class="pt-2 flex items-center justify-end gap-2.5">
-          <button type="button" onclick="closeApiKeyModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition-colors">Close</button>
-          <button type="button" onclick="saveApiKey()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">Apply & Load 3D Tiles</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1297,17 +1148,11 @@
     // -------------------------------------------------------------
     // 2. STATE MANAGEMENT & VIEWPORT ENGINES
     // -------------------------------------------------------------
-    let currentMode = 'photorealistic'; // 'satellite' | 'photorealistic' | 'operational'
+    let currentMode = 'satellite'; // 'satellite' | 'operational'
     let selectedBuildingId = null;
     let autoTourActive = false;
     let showOverlays = true;
     let currentHealthFilter = 'all';
-
-    // Cesium State
-    let cesiumViewer = null;
-    let google3DTileset = null;
-    let cesiumEntities = [];
-    let googleApiKey = localStorage.getItem('campuspulse_google_maps_key') || '';
 
     // Three.js State
     let threeRenderer, threeScene, threeCamera, threeControls;
@@ -1315,274 +1160,14 @@
     let threeBeaconLights = new Map();
 
     const STATUS_CFG = {
-      green: { hex: 0x10b981, cesiumColor: Cesium.Color.fromCssColorString('#10b981'), css: 'bg-emerald-500', name: 'Normal' },
-      amber: { hex: 0xf59e0b, cesiumColor: Cesium.Color.fromCssColorString('#f59e0b'), css: 'bg-amber-500', name: 'Attention' },
-      red: { hex: 0xef4444, cesiumColor: Cesium.Color.fromCssColorString('#ef4444'), css: 'bg-red-500', name: 'Critical' },
-      grey: { hex: 0x94a3b8, cesiumColor: Cesium.Color.fromCssColorString('#94a3b8'), css: 'bg-slate-400', name: 'No Data' }
+      green: { hex: 0x10b981, color: '#10b981', css: 'bg-emerald-500', name: 'Normal' },
+      amber: { hex: 0xf59e0b, color: '#f59e0b', css: 'bg-amber-500', name: 'Attention' },
+      red: { hex: 0xef4444, color: '#ef4444', css: 'bg-red-500', name: 'Critical' },
+      grey: { hex: 0x94a3b8, color: '#94a3b8', css: 'bg-slate-400', name: 'No Data' }
     };
 
     // -------------------------------------------------------------
-    // 3. INITIALIZE CESIUMJS (Photorealistic 3D & Satellite)
-    // -------------------------------------------------------------
-    let cesiumFailed = false;
-
-    // Suppress intrusive red error widget and route cleanly to our handler
-    if (window.Cesium && Cesium.CesiumWidget) {
-      Cesium.CesiumWidget.prototype.showErrorPanel = function(title, message, error) {
-        console.warn('CesiumWidget error intercepted:', title, message, error);
-        cesiumFailed = true;
-        showCesiumWebGLErrorBanner(message);
-        switchViewMode('operational');
-      };
-    }
-
-    function checkWebGLSupport() {
-      try {
-        const c = document.createElement('canvas');
-        return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl')));
-      } catch (e) {
-        return false;
-      }
-    }
-
-    function showCesiumWebGLErrorBanner(detail) {
-      const banner = document.getElementById('webgl-fallback-banner');
-      if (banner) {
-        banner.classList.remove('hidden');
-      }
-    }
-
-    function dismissWebglBanner() {
-      const banner = document.getElementById('webgl-fallback-banner');
-      if (banner) {
-        banner.classList.add('hidden');
-      }
-    }
-
-    function openWebglHelpModal() {
-      const modal = document.getElementById('webgl-help-modal');
-      if (modal) {
-        modal.classList.remove('hidden');
-      }
-    }
-
-    function closeWebglHelpModal() {
-      const modal = document.getElementById('webgl-help-modal');
-      if (modal) {
-        modal.classList.add('hidden');
-      }
-    }
-
-    function retryCesiumInit() {
-      cesiumFailed = false;
-      dismissWebglBanner();
-      initCesiumViewer();
-      if (!cesiumFailed && cesiumViewer) {
-        switchViewMode('photorealistic');
-      }
-    }
-
-    function initCesiumViewer() {
-      if (cesiumViewer || cesiumFailed) return;
-
-      if (!checkWebGLSupport()) {
-        console.warn('WebGL is not supported or hardware acceleration is disabled.');
-        cesiumFailed = true;
-        showCesiumWebGLErrorBanner('WebGL is disabled or unsupported.');
-        switchViewMode('operational');
-        return;
-      }
-
-      try {
-        cesiumViewer = new Cesium.Viewer('cesium-container', {
-          baseLayer: false,
-          baseLayerPicker: false,
-          geocoder: false,
-          homeButton: false,
-          infoBox: false,
-          sceneModePicker: false,
-          selectionIndicator: false,
-          navigationHelpButton: false,
-          animation: false,
-          timeline: false,
-          fullscreenButton: false,
-          vrButton: false,
-          creditContainer: 'cesium-credits',
-          contextOptions: {
-            requestWebgl1: true,
-            webgl: {
-              alpha: false,
-              depth: true,
-              stencil: false,
-              antialias: true,
-              powerPreference: 'default',
-              failIfMajorPerformanceCaveat: false,
-              preserveDrawingBuffer: false
-            }
-          }
-        });
-
-        // Camera config
-        cesiumViewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
-        cesiumViewer.scene.globe.depthTestAgainstTerrain = true;
-
-        // Add High-Resolution Google Maps Satellite Base Layer
-        const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
-          url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-          maximumLevel: 21,
-          credit: 'Imagery ©2026 Google Maps'
-        });
-        cesiumViewer.imageryLayers.addImageryProvider(satelliteProvider);
-
-        // Add Campus Boundary Polygon (SRM Easwari Engineering College only)
-        addEaswariCampusBoundary();
-
-        // Add Operational Overlays (Building Markers & Pins)
-        addCesiumBuildingMarkers();
-
-        // Handle building selection via clicking in Cesium
-        const handler = new Cesium.ScreenSpaceEventHandler(cesiumViewer.scene.canvas);
-        handler.setInputAction((movement) => {
-          const pickedObject = cesiumViewer.scene.pick(movement.position);
-          if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.buildingData) {
-            selectBuilding(pickedObject.id.buildingData.id);
-          }
-        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-        // Try loading Google Photorealistic 3D Tiles if API key exists
-        loadGoogle3DTiles();
-
-        // Initial Fly-to SRM Easwari Engineering College
-        flyToEaswariOverview();
-      } catch (err) {
-        console.warn('Cesium initialization failed:', err);
-        cesiumFailed = true;
-        showCesiumWebGLErrorBanner(err && err.message ? err.message : 'Cesium WebGL initialization failed');
-        switchViewMode('operational');
-      }
-    }
-
-    let satelliteDimMaskEntity = null;
-
-    // Add Easwari Campus Boundary Outline & Surrounding Residential Dimming Mask
-    function addEaswariCampusBoundary() {
-      // Precise bounding polygon surrounding SRM Easwari Engineering College on Bharathi Salai
-      const easwariBoundaryCoords = [
-        80.1782, 13.0326, // SW corner on Bharathi Salai
-        80.1812, 13.0327, // SE corner on Bharathi Salai
-        80.1811, 13.0343, // NE corner near sports complex & PG block
-        80.1781, 13.0342  // NW corner near mechanical workshop
-      ];
-
-      // 1. Clear Cyan Illuminated Boundary Outline
-      cesiumViewer.entities.add({
-        name: 'SRM Easwari Engineering College Boundary',
-        polygon: {
-          hierarchy: Cesium.Cartesian3.fromDegreesArray(easwariBoundaryCoords),
-          material: Cesium.Color.fromCssColorString('#0284c7').withAlpha(0.08),
-          outline: true,
-          outlineColor: Cesium.Color.fromCssColorString('#38bdf8'),
-          outlineWidth: 4
-        }
-      });
-
-      // 2. Surrounding Residential Area Dimming Mask
-      // Outer polygon covering the wider Ramapuram area, with an inner cutout hole for Easwari campus
-      const outerBox = Cesium.Cartesian3.fromDegreesArray([
-        80.150, 13.010,
-        80.210, 13.010,
-        80.210, 13.060,
-        80.150, 13.060
-      ]);
-      const innerHole = [
-        new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(easwariBoundaryCoords))
-      ];
-
-      satelliteDimMaskEntity = cesiumViewer.entities.add({
-        name: 'Easwari Campus Focus Dimming Mask',
-        polygon: {
-          hierarchy: new Cesium.PolygonHierarchy(outerBox, innerHole),
-          material: Cesium.Color.fromCssColorString('#0f172a').withAlpha(0.68)
-        },
-        show: false // Activated in satellite mode
-      });
-    }
-
-    // Add 3D Billboard Markers and Selection Rings in Cesium
-    function addCesiumBuildingMarkers() {
-      EASWARI_BUILDINGS.forEach((bldg) => {
-        const statusCfg = STATUS_CFG[bldg.healthStatus];
-
-        // 3D Operational Pin / Cylinder Marker
-        const marker = cesiumViewer.entities.add({
-          position: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, bldg.heightM + 12),
-          cylinder: {
-            length: 4,
-            topRadius: 1.5,
-            bottomRadius: 0.1,
-            material: statusCfg.cesiumColor.withAlpha(0.85)
-          },
-          buildingData: bldg
-        });
-
-        // Pulsing Base Ring
-        const ring = cesiumViewer.entities.add({
-          position: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, 2),
-          ellipse: {
-            semiMinorAxis: 16.0,
-            semiMajorAxis: 16.0,
-            material: statusCfg.cesiumColor.withAlpha(0.25),
-            outline: true,
-            outlineColor: statusCfg.cesiumColor,
-            outlineWidth: 2
-          },
-          buildingData: bldg
-        });
-
-        cesiumEntities.push({ id: bldg.id, marker, ring });
-      });
-    }
-
-    // Load Google Photorealistic 3D Tiles
-    async function loadGoogle3DTiles() {
-      if (!googleApiKey) return;
-
-      try {
-        if (google3DTileset) {
-          cesiumViewer.scene.primitives.remove(google3DTileset);
-        }
-
-        google3DTileset = await Cesium.Cesium3DTileset.fromUrl(
-          `https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}`,
-          {
-            showCreditsOnScreen: true
-          }
-        );
-
-        cesiumViewer.scene.primitives.add(google3DTileset);
-        document.getElementById('attribution-text').innerText = 'Google Maps Platform Photorealistic 3D Tiles ©2026 Google';
-      } catch (err) {
-        console.warn('Google 3D Tiles notice:', err);
-      }
-    }
-
-    // Fly to SRM Easwari Overview
-    function flyToEaswariOverview() {
-      if (!cesiumViewer) return;
-      cesiumViewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0018, CAMPUS_CENTER.height),
-        orientation: {
-          heading: Cesium.Math.toRadians(0), // North facing into Bharathi Salai
-          pitch: Cesium.Math.toRadians(-40),
-          roll: 0.0
-        },
-        duration: 1.8
-      });
-    }
-
-    // -------------------------------------------------------------
-    // 4. INITIALIZE THREE.JS (Operational 3D Digital Twin)
+    // 3. INITIALIZE THREE.JS (Operational 3D Digital Twin)
     // -------------------------------------------------------------
     function initThreeScene() {
       if (threeRenderer) return;
@@ -2068,36 +1653,33 @@
     }
 
     // -------------------------------------------------------------
-    // 5. VIEW MODE SWITCHER (Satellite | Photorealistic 3D | Operational)
+    // 5. VIEW MODE SWITCHER (Google Satellite | Holographic 3D)
     // -------------------------------------------------------------
     function switchViewMode(mode) {
       currentMode = mode;
 
       const googleSatEl = document.getElementById('google-satellite-container');
-      const cesiumEl = document.getElementById('cesium-container');
       const threeEl = document.getElementById('three-container');
       const satToolbar = document.getElementById('satellite-toolbar');
       const badge = document.getElementById('active-mode-badge');
 
-      ['satellite', 'photorealistic', 'operational'].forEach(m => {
+      ['satellite', 'operational'].forEach(m => {
         const btn = document.getElementById(`mode-btn-${m}`);
         if (btn) {
           if (m === mode) {
-            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5';
+            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5';
           } else {
-            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+            btn.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
           }
         }
       });
 
       if (mode === 'satellite') {
         googleSatEl.style.display = 'block';
-        cesiumEl.style.display = 'none';
         threeEl.style.display = 'none';
         if (satToolbar) satToolbar.style.display = 'flex';
         badge.innerText = 'Google Maps Satellite';
 
-        dismissWebglBanner();
         if (!googleSatelliteMap) {
           initGoogleSatelliteMap();
         } else {
@@ -2105,28 +1687,8 @@
           resetGoogleSatelliteView();
         }
 
-      } else if (mode === 'photorealistic') {
-        googleSatEl.style.display = 'none';
-        cesiumEl.style.display = 'block';
-        threeEl.style.display = 'none';
-        if (satToolbar) satToolbar.style.display = 'none';
-        badge.innerText = 'Google 3D Tiles';
-
-        if (cesiumFailed) {
-          showCesiumWebGLErrorBanner('Photorealistic 3D requires WebGL / Hardware Acceleration.');
-          switchViewMode('satellite');
-          return;
-        }
-
-        if (!cesiumViewer) initCesiumViewer();
-        if (cesiumViewer) {
-          if (google3DTileset) google3DTileset.show = true;
-          flyToEaswariOverview();
-        }
-
       } else if (mode === 'operational') {
         googleSatEl.style.display = 'none';
-        cesiumEl.style.display = 'none';
         threeEl.style.display = 'block';
         if (satToolbar) satToolbar.style.display = 'none';
         badge.innerText = 'Holographic 3D Twin';
@@ -2168,56 +1730,29 @@
         return;
       }
 
-      if (!cesiumViewer) return;
-
-      const center = Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude, 0);
-
-      if (perspective === 'north') {
-        // Looking North towards Bharathi Salai entrance
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0022, 280),
-          orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 }
-        });
-      } else if (perspective === 'south') {
-        // Looking South toward Bharathi Salai
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude + 0.0022, 280),
-          orientation: { heading: Cesium.Math.toRadians(180), pitch: Cesium.Math.toRadians(-35), roll: 0 }
-        });
-      } else if (perspective === 'east') {
-        // Looking East toward Library & Sports
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude - 0.0025, CAMPUS_CENTER.latitude, 280),
-          orientation: { heading: Cesium.Math.toRadians(90), pitch: Cesium.Math.toRadians(-35), roll: 0 }
-        });
-      } else if (perspective === 'west') {
-        // Looking West toward Mech Block
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude + 0.0025, CAMPUS_CENTER.latitude, 280),
-          orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-35), roll: 0 }
-        });
-      } else if (perspective === 'top-down') {
-        // 90-degree Nadir Satellite View
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude, 380),
-          orientation: { heading: 0, pitch: Cesium.Math.toRadians(-88), roll: 0 }
-        });
-      } else if (perspective === 'oblique') {
-        // 45-degree Angled 3D
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0018, 300),
-          orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 }
-        });
+      // Google Satellite View perspectives
+      if (googleSatelliteMap) {
+        if (perspective === 'north' || perspective === 'top-down') {
+          googleSatelliteMap.flyTo([13.03335, 80.1794], 18, { duration: 1.0 });
+        } else if (perspective === 'east') {
+          googleSatelliteMap.flyTo([13.0332, 80.1805], 18.5, { duration: 1.0 });
+        } else if (perspective === 'west') {
+          googleSatelliteMap.flyTo([13.0333, 80.1784], 18.5, { duration: 1.0 });
+        } else if (perspective === 'south') {
+          googleSatelliteMap.flyTo([13.0327, 80.1793], 18.5, { duration: 1.0 });
+        } else if (perspective === 'oblique') {
+          googleSatelliteMap.flyTo([13.03335, 80.1794], 19, { duration: 1.0 });
+        }
       }
     }
 
     function resetCampusCamera() {
       document.getElementById('building-focus-select').value = 'all';
-      if (currentMode === 'operational') {
+      if (currentMode === 'operational' && threeCamera && threeControls) {
         threeCamera.position.set(0, 95, 105);
         threeControls.target.set(0, 0, 10);
       } else {
-        flyToEaswariOverview();
+        resetGoogleSatelliteView();
       }
       closeBuildingDrawer();
     }
@@ -2237,12 +1772,6 @@
     function toggleOperationalOverlays() {
       showOverlays = !showOverlays;
       document.getElementById('labels-container').style.display = showOverlays ? 'block' : 'none';
-      if (cesiumViewer) {
-        cesiumEntities.forEach(e => {
-          e.marker.show = showOverlays;
-          e.ring.show = showOverlays;
-        });
-      }
       const btn = document.getElementById('btn-overlays-toggle');
       if (showOverlays) {
         btn.classList.add('bg-slate-900', 'text-white');
@@ -2262,19 +1791,11 @@
       document.getElementById('building-focus-select').value = bldgId;
 
       // Camera Glide to Building
-      if (currentMode === 'operational') {
+      if (currentMode === 'operational' && threeControls && threeCamera) {
         threeControls.target.set(bldg.localPos[0], bldg.localPos[1] + 4, bldg.localPos[2]);
         threeCamera.position.set(bldg.localPos[0] + 18, bldg.localPos[1] + 28, bldg.localPos[2] + 32);
-      } else if (cesiumViewer) {
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat - 0.0006, 110),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-35),
-            roll: 0.0
-          },
-          duration: 1.6
-        });
+      } else if (googleSatelliteMap) {
+        googleSatelliteMap.flyTo([bldg.lat, bldg.lng], 19, { duration: 1.0 });
       }
 
       // Populate Drawer
@@ -2474,15 +1995,6 @@
       if (!bldg) return;
       bldg.healthStatus = newStatus;
 
-      // Update Cesium Operational Overlays
-      const cEntity = cesiumEntities.find(e => e.id === bldgId);
-      if (cEntity) {
-        const cColor = STATUS_CFG[newStatus].cesiumColor;
-        cEntity.marker.cylinder.material = cColor.withAlpha(0.85);
-        cEntity.ring.ellipse.material = cColor.withAlpha(0.25);
-        cEntity.ring.ellipse.outlineColor = cColor;
-      }
-
       // Update Three.js Operational Meshes
       const tMesh = threeBuildingMeshes.get(bldgId);
       if (tMesh) {
@@ -2549,25 +2061,33 @@
     // Sync label coordinates with camera frame
     function tickLabelPositions() {
       requestAnimationFrame(tickLabelPositions);
-      if (!showOverlays) return;
-
-      if (currentMode !== 'operational' && cesiumViewer) {
-        EASWARI_BUILDINGS.forEach(bldg => {
-          const el = document.getElementById(`label-${bldg.id}`);
-          if (!el) return;
-
-          const pos = Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, bldg.heightM + 14);
-          const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(cesiumViewer.scene, pos);
-
-          if (canvasPos && canvasPos.x >= 0 && canvasPos.y >= 0 && canvasPos.x <= window.innerWidth && canvasPos.y <= window.innerHeight) {
-            el.style.left = `${canvasPos.x}px`;
-            el.style.top = `${canvasPos.y}px`;
-            el.style.display = 'flex';
-          } else {
-            el.style.display = 'none';
-          }
-        });
+      if (!showOverlays || currentMode !== 'operational' || !threeCamera) {
+        if (currentMode !== 'operational') {
+          document.getElementById('labels-container').style.display = 'none';
+        }
+        return;
       }
+      document.getElementById('labels-container').style.display = 'block';
+
+      EASWARI_BUILDINGS.forEach(bldg => {
+        const el = document.getElementById(`label-${bldg.id}`);
+        if (!el) return;
+
+        const pos = new THREE.Vector3(bldg.localPos[0], bldg.localPos[1] + (bldg.localDim[1] || 12) + 3, bldg.localPos[2]);
+        pos.project(threeCamera);
+
+        if (pos.z > 1) {
+          el.style.display = 'none';
+          return;
+        }
+
+        const x = (pos.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(pos.y * 0.5) + 0.5) * window.innerHeight;
+
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.style.display = 'flex';
+      });
     }
     tickLabelPositions();
 
@@ -2699,27 +2219,7 @@
     }
 
     // -------------------------------------------------------------
-    // 11. API KEY MODAL
-    // -------------------------------------------------------------
-    function openApiKeyModal() {
-      document.getElementById('input-google-api-key').value = googleApiKey;
-      document.getElementById('apikey-modal').classList.remove('hidden');
-    }
-
-    function closeApiKeyModal() {
-      document.getElementById('apikey-modal').classList.add('hidden');
-    }
-
-    function saveApiKey() {
-      const key = document.getElementById('input-google-api-key').value.trim();
-      googleApiKey = key;
-      localStorage.setItem('campuspulse_google_maps_key', key);
-      closeApiKeyModal();
-      loadGoogle3DTiles();
-    }
-
-    // -------------------------------------------------------------
-    // 12. HAMBURGER NAVIGATION DRAWER & 5 MODULES SCRIPT
+    // 11. HAMBURGER NAVIGATION DRAWER & 5 MODULES SCRIPT
     // -------------------------------------------------------------
     const TECHNICIANS = [
       { id: 'T1', name: 'Er. Rajesh Kumar', trade: 'Electrical', phone: '+91 98401 23091', status: 'Available' },
