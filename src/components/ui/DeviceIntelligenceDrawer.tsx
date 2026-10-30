@@ -165,8 +165,9 @@ export const DeviceIntelligenceDrawer: React.FC<DeviceIntelligenceDrawerProps> =
             <p className="text-slate-300 leading-relaxed text-[11px]">
               The Python backend is not running at <code className="text-red-300 bg-red-900/30 px-1 py-0.5 rounded">http://127.0.0.1:8000</code>.
             </p>
-            <div className="text-[11px] text-slate-400 bg-slate-900 p-2 rounded-lg font-mono">
-              python backend/main.py
+            <div className="text-[11px] text-slate-400 bg-slate-900 p-2 rounded-lg font-mono flex items-center justify-between">
+              <span>start-backend.bat</span>
+              <span className="text-slate-500 text-[10px]">(or python backend/main.py)</span>
             </div>
           </div>
         )}
