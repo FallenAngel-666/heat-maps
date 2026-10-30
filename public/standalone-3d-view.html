@@ -8,6 +8,10 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Leaflet for High-Resolution Google Maps Satellite View -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- CesiumJS for Google Photorealistic 3D Tiles & Authentic Satellite -->
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
@@ -55,7 +59,7 @@
       -webkit-user-select: none;
       background-color: #f8fafc;
     }
-    #cesium-container, #three-container {
+    #google-satellite-container, #cesium-container, #three-container {
       width: 100vw;
       height: 100vh;
       position: absolute;
@@ -63,6 +67,15 @@
       left: 0;
       z-index: 0;
       outline: none;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      font-family: 'Inter', system-ui, sans-serif;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+    .google-custom-marker {
+      background: none;
+      border: none;
     }
     /* Hide Cesium default widget overlays and default crash modal */
     .cesium-viewer-bottom {
@@ -117,10 +130,13 @@
 <body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
 
   <!-- VIEWPORTS -->
-  <!-- 1. Cesium Container for Photorealistic 3D & Satellite Views -->
-  <div id="cesium-container"></div>
+  <!-- 1. Google Maps Authentic Satellite Viewport (Leaflet + High-Resolution Google Satellite Imagery) -->
+  <div id="google-satellite-container"></div>
 
-  <!-- 2. Three.js Container for Operational 3D View -->
+  <!-- 2. Cesium Container for Photorealistic 3D & 3D Tiles Views -->
+  <div id="cesium-container" style="display: none;"></div>
+
+  <!-- 3. Three.js Container for Operational 3D View -->
   <div id="three-container" style="display: none;"></div>
 
   <!-- 3. Screen-Space 3D Operational Labels Layer -->
@@ -167,17 +183,17 @@
 
       <!-- CENTER: 3-MODE VIEW SWITCHER -->
       <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
-        <button id="mode-btn-satellite" onclick="switchViewMode('satellite')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+        <button id="mode-btn-satellite" onclick="switchViewMode('satellite')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5">
           <span>🛰️</span>
-          <span class="hidden md:inline">Satellite View</span>
-        </button>
-        <button id="mode-btn-photorealistic" onclick="switchViewMode('photorealistic')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5">
-          <span>🌍</span>
-          <span>Photorealistic 3D</span>
+          <span>Google Satellite</span>
         </button>
         <button id="mode-btn-operational" onclick="switchViewMode('operational')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
           <span>🏢</span>
-          <span class="hidden md:inline">Operational 3D</span>
+          <span class="hidden md:inline">Holographic 3D</span>
+        </button>
+        <button id="mode-btn-photorealistic" onclick="switchViewMode('photorealistic')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+          <span>🌍</span>
+          <span class="hidden md:inline">Google 3D Tiles</span>
         </button>
       </div>
 
@@ -283,6 +299,51 @@
 
     <!-- Center Space for 3D exploration -->
     <div class="flex-1 w-full pointer-events-none"></div>
+
+    <!-- GOOGLE MAPS SATELLITE FLOATING CONTROLS (Active in Satellite Mode) -->
+    <div id="satellite-toolbar" class="absolute top-20 right-6 z-20 pointer-events-auto flex flex-col gap-2.5 bg-white/95 backdrop-blur-md border border-slate-200 p-3.5 rounded-2xl shadow-xl text-xs select-none max-w-xs">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div class="flex items-center gap-2 font-bold text-slate-900">
+          <span class="text-base">🛰️</span>
+          <div>
+            <div class="leading-none">Google Maps Satellite</div>
+            <div class="text-[10px] text-slate-400 font-normal mt-0.5">SRM Easwari Ramapuram Campus</div>
+          </div>
+        </div>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold animate-pulse">ACTIVE</span>
+      </div>
+      
+      <!-- Layer Selector: Hybrid vs Pure Satellite vs Standard Road Map -->
+      <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-[11px] font-semibold">
+        <button id="sat-layer-hybrid" onclick="setGoogleMapLayer('hybrid')" class="flex-1 py-1 rounded-lg bg-white text-sky-700 shadow-xs font-bold transition">
+          Hybrid (Roads)
+        </button>
+        <button id="sat-layer-satellite" onclick="setGoogleMapLayer('satellite')" class="flex-1 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition">
+          Pure Satellite
+        </button>
+        <button id="sat-layer-roadmap" onclick="setGoogleMapLayer('roadmap')" class="flex-1 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition">
+          Road Map
+        </button>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="grid grid-cols-2 gap-2 pt-0.5">
+        <button onclick="resetGoogleSatelliteView()" class="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200 flex items-center justify-center gap-1.5 transition">
+          <span>🎯</span>
+          <span>Focus Campus</span>
+        </button>
+        <a href="https://www.google.com/maps/place/SRM+Easwari+Engineering+College/@13.0332,80.1792,18z/data=!3m1!1e3" target="_blank" class="px-2.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-semibold border border-sky-200 flex items-center justify-center gap-1.5 transition">
+          <span>↗️</span>
+          <span>Google Earth</span>
+        </a>
+      </div>
+
+      <!-- Geographic Metadata Reference -->
+      <div class="text-[10px] text-slate-500 pt-1 flex items-center justify-between border-t border-slate-100">
+        <span>📍 13.0332° N, 80.1792° E</span>
+        <span class="font-medium text-slate-600">Bharathi Salai</span>
+      </div>
+    </div>
 
     <!-- BOTTOM-LEFT: GOOGLE MAPS COMPLIANCE ATTRIBUTION BAR -->
     <div id="google-attribution-bar" class="absolute bottom-4 left-4 z-20 pointer-events-auto flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl shadow-md text-[10px] text-slate-600">
@@ -1365,11 +1426,12 @@
         cesiumViewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
         cesiumViewer.scene.globe.depthTestAgainstTerrain = true;
 
-        // Add High-Resolution Satellite Base Layer (ESRI World Imagery / OSM Satellite for Chennai)
+        // Add High-Resolution Google Maps Satellite Base Layer
         const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          maximumLevel: 19,
-          credit: '© Esri, Maxar, Earthstar Geographics'
+          url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          maximumLevel: 21,
+          credit: 'Imagery ©2026 Google Maps'
         });
         cesiumViewer.imageryLayers.addImageryProvider(satelliteProvider);
 
@@ -1788,74 +1850,287 @@
     }
 
     // -------------------------------------------------------------
+    // 4b. GOOGLE MAPS SATELLITE ENGINE (Leaflet + Authentic Google Tiles)
+    // -------------------------------------------------------------
+    let googleSatelliteMap = null;
+    let googleTileLayers = {};
+    let currentGoogleTileKey = 'hybrid';
+    let googleMapPolygons = [];
+    let googleMapMarkers = [];
+
+    function initGoogleSatelliteMap() {
+      if (googleSatelliteMap) return;
+      const container = document.getElementById('google-satellite-container');
+      if (!container || !window.L) return;
+
+      googleSatelliteMap = L.map('google-satellite-container', {
+        center: [13.03335, 80.1794],
+        zoom: 18,
+        maxZoom: 21,
+        minZoom: 15,
+        zoomControl: false,
+        attributionControl: false
+      });
+
+      // Zoom controls in bottom-right
+      L.control.zoom({ position: 'bottomright' }).addTo(googleSatelliteMap);
+
+      // Official Google Maps Tile Servers
+      googleTileLayers = {
+        hybrid: L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+          maxZoom: 21,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: 'Imagery ©2026 Google Maps'
+        }),
+        satellite: L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+          maxZoom: 21,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: 'Imagery ©2026 Google Maps'
+        }),
+        roadmap: L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+          maxZoom: 21,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: 'Map data ©2026 Google'
+        })
+      };
+
+      googleTileLayers[currentGoogleTileKey].addTo(googleSatelliteMap);
+
+      // Campus Boundary Polygon (SRM Easwari Engineering College)
+      const campusBoundary = [
+        [13.0326, 80.1782], // SW at Bharathi Salai & BMS Block Rd
+        [13.0336, 80.1782], // NW along BMS Block Rd
+        [13.0345, 80.1788], // North boundary
+        [13.0345, 80.1812], // NE boundary near Boys Hostel 3
+        [13.0327, 80.1812], // SE boundary near Natarajan Salai
+        [13.0326, 80.1792]  // South frontage on Bharathi Salai
+      ];
+
+      L.polygon(campusBoundary, {
+        color: '#0284c7',
+        weight: 3,
+        dashArray: '6, 6',
+        fillColor: '#38bdf8',
+        fillOpacity: 0.12
+      }).addTo(googleSatelliteMap).bindTooltip(
+        '<div style="font-family:Inter,sans-serif;"><strong style="color:#0284c7;font-size:12px;">SRM Easwari Engineering College Boundary</strong><br><span style="color:#64748b;font-size:10px;">Bharathi Salai, Ramapuram, Chennai (Autonomous)</span></div>',
+        { permanent: false, direction: 'top' }
+      );
+
+      // Building Footprints matching verified maps
+      const buildingPolygons = [
+        {
+          id: 'EEC-MAIN-01',
+          coords: [
+            [13.03295, 80.1788],
+            [13.03345, 80.1788],
+            [13.03345, 80.1796],
+            [13.03295, 80.1796]
+          ]
+        },
+        {
+          id: 'EEC-MECH-02',
+          coords: [
+            [13.03315, 80.1783],
+            [13.03365, 80.1783],
+            [13.03365, 80.1787],
+            [13.03315, 80.1787]
+          ]
+        },
+        {
+          id: 'EEC-LIB-03',
+          coords: [
+            [13.03285, 80.1797],
+            [13.03335, 80.1797],
+            [13.03335, 80.1803],
+            [13.03285, 80.1803]
+          ]
+        },
+        {
+          id: 'EEC-PG-04',
+          coords: [
+            [13.03375, 80.1799],
+            [13.03425, 80.1799],
+            [13.03425, 80.1805],
+            [13.03375, 80.1805]
+          ]
+        },
+        {
+          id: 'EEC-SPORT-05',
+          coords: [
+            [13.03335, 80.1804],
+            [13.03395, 80.1804],
+            [13.03395, 80.1810],
+            [13.03335, 80.1810]
+          ]
+        },
+        {
+          id: 'EEC-GATE-06',
+          coords: [
+            [13.03265, 80.1790],
+            [13.03285, 80.1790],
+            [13.03285, 80.1794],
+            [13.03265, 80.1794]
+          ]
+        }
+      ];
+
+      buildingPolygons.forEach(bp => {
+        const bldg = EASWARI_BUILDINGS.find(b => b.id === bp.id);
+        if (!bldg) return;
+        const color = bldg.healthStatus === 'red' ? '#ef4444' : bldg.healthStatus === 'amber' ? '#f59e0b' : bldg.healthStatus === 'grey' ? '#94a3b8' : '#10b981';
+
+        const poly = L.polygon(bp.coords, {
+          color: color,
+          weight: 2.5,
+          fillColor: color,
+          fillOpacity: 0.28
+        }).addTo(googleSatelliteMap);
+
+        poly.on('click', () => {
+          selectBuilding(bldg.id);
+        });
+
+        poly.bindTooltip(
+          `<div style="font-family:Inter,sans-serif;padding:2px 4px;">
+            <strong style="color:#0f172a;font-size:12px;">${bldg.name}</strong><br>
+            <span style="font-size:10px;color:#64748b;">${bldg.code} • Health: <b style="color:${color}">${bldg.healthStatus.toUpperCase()}</b> • ${bldg.occupancy} occupants</span>
+          </div>`,
+          { sticky: true }
+        );
+      });
+
+      // Markers with interactive status pins
+      EASWARI_BUILDINGS.forEach(bldg => {
+        const statusColor = bldg.healthStatus === 'red' ? '#ef4444' : bldg.healthStatus === 'amber' ? '#f59e0b' : bldg.healthStatus === 'grey' ? '#64748b' : '#10b981';
+
+        const customIcon = L.divIcon({
+          className: 'google-custom-marker',
+          html: `
+            <div onclick="selectBuilding('${bldg.id}')" style="cursor: pointer; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35));">
+              <div style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(4px); color: white; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 8px; border: 1.5px solid ${statusColor}; display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor};"></span>
+                <span>${bldg.shortName}</span>
+              </div>
+              <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid rgba(15, 23, 42, 0.95);"></div>
+            </div>
+          `,
+          iconSize: [0, 0]
+        });
+
+        L.marker([bldg.lat, bldg.lng], { icon: customIcon }).addTo(googleSatelliteMap);
+      });
+
+      // Landmark contextual labels matching user's map screenshots
+      const landmarks = [
+        { name: '🛣️ Bharathi Salai (Main Avenue & Bus Stop)', coords: [13.03235, 80.1793] },
+        { name: '🚌 SRM Ramapuram Management & Bus Fleet', coords: [13.0347, 80.1784] },
+        { name: '🏠 SRM Boys Hostel-3', coords: [13.0341, 80.1812] },
+        { name: '🚗 SRM BMS Block Rd', coords: [13.0334, 80.1779] },
+        { name: '🌊 Ramapuram Retention Lake', coords: [13.0324, 80.1818] }
+      ];
+
+      landmarks.forEach(lm => {
+        const lmIcon = L.divIcon({
+          className: 'google-custom-marker',
+          html: `
+            <div style="transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #334155; box-shadow: 0 2px 6px rgba(0,0,0,0.15); white-space: nowrap;">
+              ${lm.name}
+            </div>
+          `,
+          iconSize: [0, 0]
+        });
+        L.marker(lm.coords, { icon: lmIcon }).addTo(googleSatelliteMap);
+      });
+    }
+
+    function setGoogleMapLayer(key) {
+      if (!googleSatelliteMap || !googleTileLayers[key]) return;
+      googleSatelliteMap.removeLayer(googleTileLayers[currentGoogleTileKey]);
+      googleTileLayers[key].addTo(googleSatelliteMap);
+      currentGoogleTileKey = key;
+
+      ['hybrid', 'satellite', 'roadmap'].forEach(k => {
+        const btn = document.getElementById(`sat-layer-${k}`);
+        if (btn) {
+          if (k === key) {
+            btn.className = 'flex-1 py-1 rounded-lg bg-white text-sky-700 shadow-xs font-bold transition';
+          } else {
+            btn.className = 'flex-1 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition';
+          }
+        }
+      });
+    }
+
+    function resetGoogleSatelliteView() {
+      if (!googleSatelliteMap) return;
+      googleSatelliteMap.flyTo([13.03335, 80.1794], 18, { duration: 1.2 });
+    }
+
+    // -------------------------------------------------------------
     // 5. VIEW MODE SWITCHER (Satellite | Photorealistic 3D | Operational)
     // -------------------------------------------------------------
     function switchViewMode(mode) {
       currentMode = mode;
 
+      const googleSatEl = document.getElementById('google-satellite-container');
       const cesiumEl = document.getElementById('cesium-container');
       const threeEl = document.getElementById('three-container');
+      const satToolbar = document.getElementById('satellite-toolbar');
       const badge = document.getElementById('active-mode-badge');
 
       ['satellite', 'photorealistic', 'operational'].forEach(m => {
         const btn = document.getElementById(`mode-btn-${m}`);
-        if (m === mode) {
-          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5';
-        } else {
-          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+        if (btn) {
+          if (m === mode) {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+          }
         }
       });
 
       if (mode === 'satellite') {
-        if (cesiumFailed) {
-          showCesiumWebGLErrorBanner('Satellite view requires WebGL / Hardware Acceleration.');
-          switchViewMode('operational');
-          return;
-        }
-        cesiumEl.style.display = 'block';
+        googleSatEl.style.display = 'block';
+        cesiumEl.style.display = 'none';
         threeEl.style.display = 'none';
-        badge.innerText = 'Satellite (Easwari Focus)';
+        if (satToolbar) satToolbar.style.display = 'flex';
+        badge.innerText = 'Google Maps Satellite';
 
-        if (!cesiumViewer) initCesiumViewer();
-        if (cesiumViewer) {
-          if (google3DTileset) google3DTileset.show = false;
-          if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = true;
-
-          // Auto zoom-fit to SRM Easwari Engineering College Campus Boundary
-          cesiumViewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0006, 320),
-            orientation: {
-              heading: 0,
-              pitch: Cesium.Math.toRadians(-75), // Focused oblique satellite view
-              roll: 0.0
-            },
-            duration: 1.5
-          });
+        dismissWebglBanner();
+        if (!googleSatelliteMap) {
+          initGoogleSatelliteMap();
+        } else {
+          googleSatelliteMap.invalidateSize();
+          resetGoogleSatelliteView();
         }
 
       } else if (mode === 'photorealistic') {
-        if (cesiumFailed) {
-          showCesiumWebGLErrorBanner('Photorealistic 3D requires WebGL / Hardware Acceleration.');
-          switchViewMode('operational');
-          return;
-        }
+        googleSatEl.style.display = 'none';
         cesiumEl.style.display = 'block';
         threeEl.style.display = 'none';
-        badge.innerText = 'Photorealistic 3D';
+        if (satToolbar) satToolbar.style.display = 'none';
+        badge.innerText = 'Google 3D Tiles';
+
+        if (cesiumFailed) {
+          showCesiumWebGLErrorBanner('Photorealistic 3D requires WebGL / Hardware Acceleration.');
+          switchViewMode('satellite');
+          return;
+        }
 
         if (!cesiumViewer) initCesiumViewer();
         if (cesiumViewer) {
           if (google3DTileset) google3DTileset.show = true;
-          if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
           flyToEaswariOverview();
         }
 
       } else if (mode === 'operational') {
+        googleSatEl.style.display = 'none';
         cesiumEl.style.display = 'none';
         threeEl.style.display = 'block';
+        if (satToolbar) satToolbar.style.display = 'none';
         badge.innerText = 'Holographic 3D Twin';
 
-        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
         if (!threeRenderer) initThreeScene();
         if (threeCamera && threeControls) {
           threeCamera.position.set(0, 95, 105);
@@ -2250,27 +2525,10 @@
     // -------------------------------------------------------------
     // 9. SCREEN-SPACE 3D BILLBOARD LABELS
     // -------------------------------------------------------------
-    function isAnyDrawerOrModalOpen() {
-      const bldgDrawer = document.getElementById('building-drawer');
-      const incDrawer = document.getElementById('incidents-drawer');
-      const incModal = document.getElementById('incident-modal');
-      const apiModal = document.getElementById('apikey-modal');
-      const navDrawer = document.getElementById('nav-menu-drawer');
-      const bleDrawer = document.getElementById('device-intelligence-drawer');
-
-      if (bldgDrawer && !bldgDrawer.classList.contains('translate-x-full')) return true;
-      if (incDrawer && !incDrawer.classList.contains('translate-x-full')) return true;
-      if (incModal && !incModal.classList.contains('hidden')) return true;
-      if (apiModal && !apiModal.classList.contains('hidden')) return true;
-      if (navDrawer && !navDrawer.classList.contains('-translate-x-full')) return true;
-      if (bleDrawer && !bleDrawer.classList.contains('translate-x-full')) return true;
-      return false;
-    }
-
     function updateOperationalLabels() {
       const container = document.getElementById('labels-container');
       container.innerHTML = '';
-      if (!showOverlays || isAnyDrawerOrModalOpen()) return;
+      if (!showOverlays) return;
 
       EASWARI_BUILDINGS.forEach((bldg) => {
         if (currentHealthFilter !== 'all' && bldg.healthStatus !== currentHealthFilter) return;
@@ -2291,13 +2549,7 @@
     // Sync label coordinates with camera frame
     function tickLabelPositions() {
       requestAnimationFrame(tickLabelPositions);
-      const container = document.getElementById('labels-container');
-      if (isAnyDrawerOrModalOpen() || !showOverlays) {
-        if (container) container.style.display = 'none';
-        return;
-      } else {
-        if (container) container.style.display = 'block';
-      }
+      if (!showOverlays) return;
 
       if (currentMode !== 'operational' && cesiumViewer) {
         EASWARI_BUILDINGS.forEach(bldg => {
@@ -2620,7 +2872,8 @@
     // 13. INITIAL BOOTSTRAP
     // -------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
-      initCesiumViewer();
+      // Default directly to the Authentic Google Maps Satellite view of SRM Easwari!
+      switchViewMode('satellite');
       refreshHealthStats();
       updateOperationalLabels();
     });

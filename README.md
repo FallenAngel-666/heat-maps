@@ -54,7 +54,97 @@ Integrates seamlessly with the standalone **Campus Operations & Emergency Respon
 
 ---
 
-## 🚀 How to Run Locally
+## 📡 Live Device Intelligence – Anonymous Bluetooth Detection Module
+
+CampusOps features a production-ready **Anonymous Bluetooth Low Energy (BLE) Device Detection & Density Intelligence Module**. It transforms a standard Windows 11 laptop into an edge IoT security telemetry sensor to monitor physical crowd density without infringing on individual privacy.
+
+### 🛡️ Privacy & Compliance Architecture
+- **Zero Identity Exposure**: Personal device names and raw Bluetooth MAC addresses are never stored, logged, or exposed across any API or frontend view.
+- **One-Way Ephemeral Hashing**: Devices are anonymized using session-salted SHA-256 (`DEV-<12-HEX>`) where the 32-byte salt exists exclusively in RAM and is discarded on shutdown.
+- **60-Second Sliding Expiration Window**: BLE advertisements are maintained in an ephemeral sliding memory registry and automatically purged after 60 seconds of inactivity.
+- **Non-Invasive**: Passively listens to standard BLE advertising beacons; does not initiate pairing, connection, or service interrogation.
+
+### 🌐 API Endpoints (`http://127.0.0.1:8000`)
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/api/device-intelligence/status` | Returns scanner status, live device count in 60s window, density rating, primary sensor, and zone list. |
+| `GET` | `/api/device-intelligence/zones` | Returns coverage zone metadata and density breakdowns. |
+| `POST` | `/api/device-intelligence/mode` | Toggles between `live` (laptop BLE hardware) and `demo` (multi-zone simulation). Payload: `{"mode": "live"}` or `{"mode": "demo"}`. |
+| `POST` | `/api/device-intelligence/rescan` | Restarts the Windows BLE adapter scanner and flushes state. |
+| `GET` | `/api/device-intelligence/health` | Health check endpoint returning adapter packets and status. |
+
+---
+
+## 🚀 Quick Start Guide (Windows 11)
+
+### 1-Click Launch (Recommended)
+Double-click `start-all.bat` in the project root. This automatically:
+1. Starts the FastAPI + Bleak Bluetooth scanner on `http://127.0.0.1:8000`
+2. Starts the Vite frontend on `http://localhost:5173`
+3. Opens the browser to the CampusOps 3D Command Dashboard
+
+### Manual Startup
+
+#### Step 1: Start Backend Scanner
+```powershell
+cd campuspulse-os/backend
+# Install dependencies if not already installed:
+python -m pip install -r requirements.txt
+# Run FastAPI server
+python main.py
+```
+
+#### Step 2: Start Frontend Application
+```powershell
+cd campuspulse-os
+npm install
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## 🧪 Testing with Your Own Smartphone
+1. Ensure **Bluetooth is turned ON** on your Windows 11 laptop.
+2. On your smartphone (iPhone or Android):
+   - Open **Settings** > **Bluetooth** (leaving the screen open makes the phone broadcast discoverable BLE advertisement beacons).
+   - Alternatively, open any app that broadcasts BLE (such as an Apple Watch pairing session, Fitness tracker app, or "nRF Connect for Mobile").
+3. In the CampusOps dashboard, observe the **Live Device Intelligence** indicator in the top-left corner:
+   - Toggle **Live Device Intelligence: ON**.
+   - Within 3–5 seconds, the detected device counter will reflect nearby active BLE beacons.
+   - Click the arrow button to open the **Anonymous Device Density Intelligence** side drawer for full telemetry and signal strength (RSSI) distribution.
+
+---
+
+## 🎪 Hackathon Demo Mode
+For presentation to judges:
+1. Open the **Live Device Intelligence** drawer.
+2. In the **Operational Mode** section, click **Hackathon Demo**.
+3. The map instantly visualizes a multi-sensor deployment across 5 key campus buildings:
+   - Easwari Main Academic Wing
+   - Central Library & Convention Hall
+   - BMS Management Studies Quad
+   - SRM Boys Hostel-3 Courtyard
+   - Student Pavilion & Food Court
+4. Click any zone in the list to automatically fly the 3D camera to that facility.
+
+---
+
+## 🛠️ Verification Test Suite
+Run the comprehensive automated test suite:
+```powershell
+python backend/test_e2e_module.py
+```
+This tests:
+1. Real Windows BLE adapter initialization & packet capture
+2. Privacy audit (ensures 0 raw MAC addresses exist in payloads)
+3. Sliding 60-second expiration and record purging
+4. Live vs Demo mode isolation
+5. Clean adapter shutdown and release
+
+---
+
+## 📦 How to Run Locally
 
 ```bash
 # Navigate to project folder
