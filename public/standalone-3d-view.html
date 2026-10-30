@@ -64,8 +64,11 @@
       z-index: 0;
       outline: none;
     }
-    /* Hide Cesium default widget overlays */
+    /* Hide Cesium default widget overlays and default crash modal */
     .cesium-viewer-bottom {
+      display: none !important;
+    }
+    .cesium-widget-errorPanel {
       display: none !important;
     }
     .cesium-credit-logoContainer, .cesium-credit-textContainer {
@@ -206,6 +209,28 @@
         </button>
       </div>
     </header>
+
+    <!-- WEBGL / HARDWARE ACCELERATION FALLBACK NOTICE BANNER -->
+    <div id="webgl-fallback-banner" class="hidden bg-gradient-to-r from-amber-600 to-amber-500 text-white border-b border-amber-600/80 px-4 md:px-6 py-2.5 flex items-center justify-between text-xs pointer-events-auto shadow-md backdrop-blur-xs select-none z-50">
+      <div class="flex items-center gap-2.5">
+        <span class="text-base leading-none">⚠️</span>
+        <div class="leading-tight">
+          <span class="font-bold">WebGL / Hardware Acceleration Required for Cesium 3D:</span>
+          <span id="webgl-banner-text" class="text-amber-100 ml-1">WebGL is disabled or unavailable in your browser. Switched automatically to <strong>Operational 3D Twin</strong> mode.</span>
+          <button onclick="openWebglHelpModal()" class="ml-2 underline font-semibold text-white hover:text-amber-100 transition-colors">
+            How to fix in Chrome →
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="retryCesiumInit()" class="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold text-[11px] transition-all">
+          Retry 3D
+        </button>
+        <button onclick="dismissWebglBanner()" title="Dismiss Banner" class="p-1 hover:bg-white/20 rounded-lg text-white transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
 
     <!-- HEALTH METRICS BAR & RAG STATUS PILLS -->
     <div class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs pointer-events-auto select-none shadow-2xs">
@@ -798,6 +823,65 @@
     </div>
   </aside>
 
+  <!-- WEBGL TROUBLESHOOTING HELP MODAL -->
+  <div id="webgl-help-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in duration-150">
+      <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-gradient-to-r from-slate-50 to-sky-50/50">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-lg">
+            ⚙️
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm md:text-base">Enable WebGL & 3D Hardware Acceleration</h3>
+            <p class="text-xs text-slate-500">Fix "Error constructing CesiumWidget" in Chrome</p>
+          </div>
+        </div>
+        <button onclick="closeWebglHelpModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs text-slate-700">
+        <div class="p-3.5 bg-sky-50 rounded-xl border border-sky-100 flex items-start gap-2.5">
+          <span class="text-sky-600 text-sm mt-0.5">ℹ️</span>
+          <p class="leading-relaxed text-sky-900">
+            CesiumJS requires WebGL to render photorealistic Google 3D tiles and satellite imagery. When Chrome's hardware graphics acceleration is turned off or blocked, this error appears.
+          </p>
+        </div>
+
+        <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Quick 30-Second Fix (Chrome):</h4>
+        
+        <ol class="space-y-2.5 list-decimal list-inside bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <li class="leading-relaxed">
+            Open a new tab and paste: <code class="px-1.5 py-0.5 bg-white border border-slate-300 rounded font-mono text-[11px] text-sky-700 select-all">chrome://settings/system</code>
+          </li>
+          <li class="leading-relaxed">
+            Turn <strong>ON</strong>: <strong>"Use graphics acceleration when available"</strong>.
+          </li>
+          <li class="leading-relaxed">
+            Click the <strong>"Relaunch"</strong> button that appears next to it.
+          </li>
+          <li class="leading-relaxed">
+            Refresh this page — the photorealistic 3D twin will load immediately!
+          </li>
+        </ol>
+
+        <div class="pt-1 text-slate-500 text-[11px] leading-relaxed">
+          <strong>Tip:</strong> If it still doesn't load after relaunching, visit <code class="px-1 bg-slate-100 rounded font-mono text-slate-700 select-all">chrome://gpu</code> to check your graphics status, or enable <code class="px-1 bg-slate-100 rounded font-mono text-slate-700 select-all">chrome://flags/#ignore-gpu-blocklist</code>.
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-end gap-2">
+        <button onclick="closeWebglHelpModal()" class="px-4 py-2 rounded-xl text-slate-700 font-medium hover:bg-slate-200/70 transition-colors">
+          Close
+        </button>
+        <button onclick="retryCesiumInit(); closeWebglHelpModal();" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">
+          Retry 3D Tiles
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- INCIDENT REPORTING MODAL -->
   <div id="incident-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in duration-150">
@@ -1179,58 +1263,142 @@
     // -------------------------------------------------------------
     // 3. INITIALIZE CESIUMJS (Photorealistic 3D & Satellite)
     // -------------------------------------------------------------
+    let cesiumFailed = false;
+
+    // Suppress intrusive red error widget and route cleanly to our handler
+    if (window.Cesium && Cesium.CesiumWidget) {
+      Cesium.CesiumWidget.prototype.showErrorPanel = function(title, message, error) {
+        console.warn('CesiumWidget error intercepted:', title, message, error);
+        cesiumFailed = true;
+        showCesiumWebGLErrorBanner(message);
+        switchViewMode('operational');
+      };
+    }
+
+    function checkWebGLSupport() {
+      try {
+        const c = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl')));
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function showCesiumWebGLErrorBanner(detail) {
+      const banner = document.getElementById('webgl-fallback-banner');
+      if (banner) {
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function dismissWebglBanner() {
+      const banner = document.getElementById('webgl-fallback-banner');
+      if (banner) {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function openWebglHelpModal() {
+      const modal = document.getElementById('webgl-help-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeWebglHelpModal() {
+      const modal = document.getElementById('webgl-help-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function retryCesiumInit() {
+      cesiumFailed = false;
+      dismissWebglBanner();
+      initCesiumViewer();
+      if (!cesiumFailed && cesiumViewer) {
+        switchViewMode('photorealistic');
+      }
+    }
+
     function initCesiumViewer() {
-      if (cesiumViewer) return;
+      if (cesiumViewer || cesiumFailed) return;
 
-      cesiumViewer = new Cesium.Viewer('cesium-container', {
-        terrainProvider: undefined,
-        imageryProvider: false,
-        baseLayerPicker: false,
-        geocoder: false,
-        homeButton: false,
-        infoBox: false,
-        sceneModePicker: false,
-        selectionIndicator: false,
-        navigationHelpButton: false,
-        animation: false,
-        timeline: false,
-        fullscreenButton: false,
-        vrButton: false,
-        creditContainer: 'cesium-credits'
-      });
+      if (!checkWebGLSupport()) {
+        console.warn('WebGL is not supported or hardware acceleration is disabled.');
+        cesiumFailed = true;
+        showCesiumWebGLErrorBanner('WebGL is disabled or unsupported.');
+        switchViewMode('operational');
+        return;
+      }
 
-      // Camera config
-      cesiumViewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
-      cesiumViewer.scene.globe.depthTestAgainstTerrain = true;
+      try {
+        cesiumViewer = new Cesium.Viewer('cesium-container', {
+          baseLayer: false,
+          baseLayerPicker: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          sceneModePicker: false,
+          selectionIndicator: false,
+          navigationHelpButton: false,
+          animation: false,
+          timeline: false,
+          fullscreenButton: false,
+          vrButton: false,
+          creditContainer: 'cesium-credits',
+          contextOptions: {
+            requestWebgl1: true,
+            webgl: {
+              alpha: false,
+              depth: true,
+              stencil: false,
+              antialias: true,
+              powerPreference: 'default',
+              failIfMajorPerformanceCaveat: false,
+              preserveDrawingBuffer: false
+            }
+          }
+        });
 
-      // Add High-Resolution Satellite Base Layer (ESRI World Imagery / OSM Satellite for Chennai)
-      const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        maximumLevel: 19,
-        credit: '© Esri, Maxar, Earthstar Geographics'
-      });
-      cesiumViewer.imageryLayers.addImageryProvider(satelliteProvider);
+        // Camera config
+        cesiumViewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+        cesiumViewer.scene.globe.depthTestAgainstTerrain = true;
 
-      // Add Campus Boundary Polygon (SRM Easwari Engineering College only)
-      addEaswariCampusBoundary();
+        // Add High-Resolution Satellite Base Layer (ESRI World Imagery / OSM Satellite for Chennai)
+        const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          maximumLevel: 19,
+          credit: '© Esri, Maxar, Earthstar Geographics'
+        });
+        cesiumViewer.imageryLayers.addImageryProvider(satelliteProvider);
 
-      // Add Operational Overlays (Building Markers & Pins)
-      addCesiumBuildingMarkers();
+        // Add Campus Boundary Polygon (SRM Easwari Engineering College only)
+        addEaswariCampusBoundary();
 
-      // Handle building selection via clicking in Cesium
-      const handler = new Cesium.ScreenSpaceEventHandler(cesiumViewer.scene.canvas);
-      handler.setInputAction((movement) => {
-        const pickedObject = cesiumViewer.scene.pick(movement.position);
-        if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.buildingData) {
-          selectBuilding(pickedObject.id.buildingData.id);
-        }
-      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        // Add Operational Overlays (Building Markers & Pins)
+        addCesiumBuildingMarkers();
 
-      // Try loading Google Photorealistic 3D Tiles if API key exists
-      loadGoogle3DTiles();
+        // Handle building selection via clicking in Cesium
+        const handler = new Cesium.ScreenSpaceEventHandler(cesiumViewer.scene.canvas);
+        handler.setInputAction((movement) => {
+          const pickedObject = cesiumViewer.scene.pick(movement.position);
+          if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.buildingData) {
+            selectBuilding(pickedObject.id.buildingData.id);
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-      // Initial Fly-to SRM Easwari Engineering College
-      flyToEaswariOverview();
+        // Try loading Google Photorealistic 3D Tiles if API key exists
+        loadGoogle3DTiles();
+
+        // Initial Fly-to SRM Easwari Engineering College
+        flyToEaswariOverview();
+      } catch (err) {
+        console.warn('Cesium initialization failed:', err);
+        cesiumFailed = true;
+        showCesiumWebGLErrorBanner(err && err.message ? err.message : 'Cesium WebGL initialization failed');
+        switchViewMode('operational');
+      }
     }
 
     let satelliteDimMaskEntity = null;
@@ -1365,20 +1533,37 @@
       threeCamera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 600);
       threeCamera.position.set(0, 95, 105);
 
-      threeRenderer = new THREE.WebGLRenderer({ antialias: true });
-      threeRenderer.setSize(window.innerWidth, window.innerHeight);
-      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      threeRenderer.shadowMap.enabled = true;
-      threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      container.appendChild(threeRenderer.domElement);
+      try {
+        threeRenderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'default' });
+        threeRenderer.setSize(window.innerWidth, window.innerHeight);
+        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        threeRenderer.shadowMap.enabled = true;
+        threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(threeRenderer.domElement);
 
-      threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
-      threeControls.enableDamping = true;
-      threeControls.dampingFactor = 0.05;
-      threeControls.maxPolarAngle = Math.PI / 2.05;
-      threeControls.minDistance = 15;
-      threeControls.maxDistance = 220;
-      threeControls.target.set(0, 0, 10);
+        threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+        threeControls.enableDamping = true;
+        threeControls.dampingFactor = 0.05;
+        threeControls.maxPolarAngle = Math.PI / 2.05;
+        threeControls.minDistance = 15;
+        threeControls.maxDistance = 220;
+        threeControls.target.set(0, 0, 10);
+      } catch (err) {
+        console.warn('Three.js WebGL initialization failed:', err);
+        container.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full text-center p-6 bg-slate-100 select-none">
+            <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mb-3 text-2xl font-bold">⚠️</div>
+            <h3 class="text-sm md:text-base font-bold text-slate-900 mb-1">WebGL Acceleration Disabled</h3>
+            <p class="text-xs text-slate-600 max-w-sm mb-4 leading-relaxed">
+              Your browser graphics acceleration is currently turned off. To explore the 3D twin, enable <strong>"Use graphics acceleration when available"</strong> in Chrome settings.
+            </p>
+            <button onclick="openWebglHelpModal()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors">
+              View Fix Instructions
+            </button>
+          </div>
+        `;
+        return;
+      }
 
       // Lights
       threeScene.add(new THREE.AmbientLight(0xffffff, 0.75));
@@ -1622,35 +1807,48 @@
       });
 
       if (mode === 'satellite') {
+        if (cesiumFailed) {
+          showCesiumWebGLErrorBanner('Satellite view requires WebGL / Hardware Acceleration.');
+          switchViewMode('operational');
+          return;
+        }
         cesiumEl.style.display = 'block';
         threeEl.style.display = 'none';
         badge.innerText = 'Satellite (Easwari Focus)';
 
         if (!cesiumViewer) initCesiumViewer();
-        if (google3DTileset) google3DTileset.show = false;
-        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = true;
+        if (cesiumViewer) {
+          if (google3DTileset) google3DTileset.show = false;
+          if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = true;
 
-        // Auto zoom-fit to SRM Easwari Engineering College Campus Boundary
-        cesiumViewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0006, 320),
-          orientation: {
-            heading: 0,
-            pitch: Cesium.Math.toRadians(-75), // Focused oblique satellite view
-            roll: 0.0
-          },
-          duration: 1.5
-        });
+          // Auto zoom-fit to SRM Easwari Engineering College Campus Boundary
+          cesiumViewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0006, 320),
+            orientation: {
+              heading: 0,
+              pitch: Cesium.Math.toRadians(-75), // Focused oblique satellite view
+              roll: 0.0
+            },
+            duration: 1.5
+          });
+        }
 
       } else if (mode === 'photorealistic') {
+        if (cesiumFailed) {
+          showCesiumWebGLErrorBanner('Photorealistic 3D requires WebGL / Hardware Acceleration.');
+          switchViewMode('operational');
+          return;
+        }
         cesiumEl.style.display = 'block';
         threeEl.style.display = 'none';
         badge.innerText = 'Photorealistic 3D';
 
         if (!cesiumViewer) initCesiumViewer();
-        if (google3DTileset) google3DTileset.show = true;
-        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
-
-        flyToEaswariOverview();
+        if (cesiumViewer) {
+          if (google3DTileset) google3DTileset.show = true;
+          if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
+          flyToEaswariOverview();
+        }
 
       } else if (mode === 'operational') {
         cesiumEl.style.display = 'none';
@@ -1659,8 +1857,10 @@
 
         if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
         if (!threeRenderer) initThreeScene();
-        threeCamera.position.set(0, 95, 105);
-        threeControls.target.set(0, 0, 10);
+        if (threeCamera && threeControls) {
+          threeCamera.position.set(0, 95, 105);
+          threeControls.target.set(0, 0, 10);
+        }
       }
 
       updateOperationalLabels();
@@ -2085,21 +2285,9 @@
           const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(cesiumViewer.scene, pos);
 
           if (canvasPos && canvasPos.x >= 0 && canvasPos.y >= 0 && canvasPos.x <= window.innerWidth && canvasPos.y <= window.innerHeight) {
-            const bldgDrawer = document.getElementById('building-drawer');
-            const incDrawer = document.getElementById('incidents-drawer');
-            const isDrawerOpen = (bldgDrawer && !bldgDrawer.classList.contains('translate-x-full')) ||
-                                 (incDrawer && !incDrawer.classList.contains('translate-x-full'));
-            const inHeaderArea = canvasPos.y < 125;
-            const inDrawerArea = isDrawerOpen && canvasPos.x > (window.innerWidth - 490);
-            const inToggleArea = canvasPos.x < 340 && canvasPos.y < 220;
-
-            if (inHeaderArea || inDrawerArea || inToggleArea) {
-              el.style.display = 'none';
-            } else {
-              el.style.left = `${canvasPos.x}px`;
-              el.style.top = `${canvasPos.y}px`;
-              el.style.display = 'flex';
-            }
+            el.style.left = `${canvasPos.x}px`;
+            el.style.top = `${canvasPos.y}px`;
+            el.style.display = 'flex';
           } else {
             el.style.display = 'none';
           }
