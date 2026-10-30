@@ -1,0 +1,235 @@
+================================================================================
+CAMPUSPULSE OS — COMPREHENSIVE FEATURES & ARCHITECTURE SPECIFICATION
+Target Campus: SRM Easwari Engineering College, Ramapuram, Chennai, India
+================================================================================
+
+1. EXECUTIVE OVERVIEW
+--------------------------------------------------------------------------------
+CampusPulse OS is an enterprise-grade 3D Digital Twin and Campus Operations System
+purpose-built for SRM Easwari Engineering College (Bharathi Salai, Ramapuram,
+Chennai, Tamil Nadu, India). The platform bridges real-time IoT facility telemetry,
+geospatial satellite imagery, photorealistic 3D visualization, incident management,
+crowd simulation, and anonymous device intelligence into a unified command dashboard.
+
+
+2. TARGET LOCATION & VERIFIED GEOGRAPHICAL BOUNDARY
+--------------------------------------------------------------------------------
+* Official Address: SRM Easwari Engineering College, Bharathi Salai, Ramapuram,
+  Chennai, Tamil Nadu 600089, India.
+* Center Coordinates: 13.0335° N, 80.1795° E.
+* Operational Scope: Strictly restricted to the 28.4-acre Easwari Engineering
+  College campus; surrounding residential areas and other SRM Ramapuram units are
+  deliberately excluded or visually dimmed from operational overlays.
+* Verified Campus Facilities:
+  1. EEC-MAIN-01: Easwari Main Academic & Admin Block (G+4 Floors, 145,000 sq.ft)
+  2. EEC-MECH-02: Easwari Mechanical & Civil Labs Complex (G+2 Floors, 62,000 sq.ft)
+  3. EEC-LIB-03:  Easwari Central Library & Convention Hall (G+3 Floors, 54,000 sq.ft)
+  4. EEC-PG-04:   Easwari PG & Technology Research Center (G+3 Floors, 48,000 sq.ft)
+  5. EEC-SPORT-05: Easwari Sports Arena & Outdoor Pavilion (G+1 Floors, 42,000 sq.ft)
+  6. EEC-GATE-06:  Easwari Main Entrance Gate & Security Station (Bharathi Salai)
+
+
+3. THREE VISUALIZATION MODES
+--------------------------------------------------------------------------------
+The application provides an instant 3-mode viewing switcher in the top header:
+
+A. Operational 3D – Complete Holographic Digital Twin
+   - High-fidelity Three.js and React Three Fiber rendering engine.
+   - Complete 360-degree finished geometry on all four facades (Front, Back,
+     Left, Right) so rotating reveals full architectural depth rather than hollow boxes.
+   - Subtle holographic edge illumination using THREE.EdgesGeometry and
+     THREE.LineSegments in cyan (#38bdf8) and sky blue (#0284c7).
+   - Semi-transparent glass facade bands with subtle cyan emissive glow.
+   - Realistic architectural details: entrance porticos with support pillars,
+     rear service & emergency staircase towers, rooftop parapets, elevator penthouses,
+     and HVAC chiller plants.
+   - Ground holographic coordinate grid subtly blended into the campus terrain.
+   - True-to-scale campus environment: Bharathi Salai two-lane avenue with yellow
+     dividing stripe, sidewalks, curbs, BMS Block Road, basketball/sports courts,
+     university bus depot with iconic yellow SRM buses, trees, and boundary walls.
+   - Interactive 3D billboard labels with distance-based scaling, building code
+     pills, and real-time pulsing status beacons.
+
+B. Focused Satellite View with Boundary Dimming Mask
+   - High-resolution satellite imagery base layer (Esri World Imagery / OSM Satellite).
+   - Exact campus boundary outlined in glowing cyan (#38bdf8).
+   - Residential Area Dimming Mask: An outer polygon mask with an inner cutout for
+     Easwari College dims surrounding residential houses and streets (#0f172a at
+     68% opacity), keeping Easwari College crystal-clear and prominent.
+   - Automatically zoom-fits to frame the verified college polygon.
+   - Clean building markers restricted exclusively to Easwari facilities.
+
+C. Photorealistic 3D Tiles (Google Maps Platform + CesiumJS)
+   - Officially supported Google Maps Platform Map Tiles API integration.
+   - Textured 3D mesh models of actual campus buildings and surrounding terrain.
+   - In-app Google Maps API Key configuration modal with secure local storage.
+   - Full compliance with Google Maps Platform licensing, dynamic attribution,
+     and official Google logo display.
+   - Seamless automatic fallback to Satellite and Three.js views if an API key is
+     not provided.
+
+
+4. COMPLETE CAMERA CONTROLS & EXPLORATION PERSPECTIVES
+--------------------------------------------------------------------------------
+* 360-Degree Orbital Rotation: Freeform mouse/touch orbiting with smooth inertia damping.
+* Smooth Zoom & Pan: Sub-meter zoom inspection down to ground level or wide regional view.
+* Preset Perspective Buttons:
+  - Front View: South-to-North perspective facing the Bharathi Salai entrance.
+  - Back View: North-to-South perspective inspecting rear labs & tech centers.
+  - Left View: West-to-East perspective along the BMS Block Road axis.
+  - Right View: East-to-West perspective overlooking the Sports Arena and Hostels.
+  - Top-Down View: 90-degree Nadir blueprint/satellite master plan.
+  - Angled 3D View: 45-degree isometric operational overview.
+* Cardinal Compass Controls: Quick-snap buttons for North (N), South (S), East (E), West (W).
+* 360° Turntable Tour: Automated continuous orbit around the campus center.
+* Reset Camera Button: Instantly restores default overview angle and zoom.
+* Individual Facility Focus: Smooth camera glide and focus on any selected building.
+
+
+5. CAMPUS OPERATIONAL HEALTH SYSTEM (RAG STATUS)
+--------------------------------------------------------------------------------
+CampusPulse OS tracks campus condition through four operational health states:
+- Green (Normal): Nominal operational status; all electrical, mechanical, and safety
+  subsystems within standard operating parameters.
+- Amber (Attention Required): Caution flagged; minor telemetry anomalies, vibration,
+  or non-critical maintenance tickets active.
+- Red (Critical): Urgent attention required; active fire alarm, power surge, fiber
+  cut, or emergency event.
+- Grey (No Data / Calibration): Sensor unmonitored or undergoing scheduled calibration.
+
+Dynamic Color Synchronization:
+When an incident is reported, the affected building immediately updates its 3D color,
+rooftop beacon, and status badge in real time. Resolving the incident restores the
+building to its nominal health state.
+
+
+6. LEFT-SIDE HAMBURGER MENU — 5 CORE MODULES + MOBILE SIGNALS
+--------------------------------------------------------------------------------
+A 3-line hamburger menu icon in the top header opens a smooth slide-in left drawer
+with backdrop blur, housing the comprehensive Operations Suite:
+
+Module 1: Campus Health Map
+- Real-time directory of all verified Easwari campus buildings.
+- Live telemetry stats: Power load (kW), ambient temperature (°C), and WiFi density.
+- Quick building selection to automatically fly the 3D camera to the selected block.
+- Campus Reliability Score index badge (e.g. 92% Nominal).
+
+Module 2: Unified Incident Engine
+- Certified Technician Roster: 5 specialized on-duty engineers (Electrical, HVAC,
+  Plumbing, Network/IT, Fire/Safety) with direct contact numbers, status indicators
+  (Available / Dispatched / Off-Duty), and 1-click Dispatch/Recall actions.
+- Critical Spare-Parts Inventory: Real-time stock counts, minimum required thresholds,
+  storage locations (e.g. Substation Stores A-12, Mech Yard Bay B), and automated
+  low-stock warning alerts (e.g. Danfoss Chiller Expansion Valves).
+- Work Order Tracking: Tracks Work Order ID, incident association, technician name,
+  parts used, priority, and progress.
+
+Module 3: Digital Twin Crisis & Evacuation Simulator
+- Interactive parameter sliders:
+  * Expected Campus Crowd (500 to 5,000 students & staff)
+  * Active Facility & Security Staff on Duty (5 to 50 personnel)
+  * Open Campus Access Gates (1 to 3 gates)
+- Real-Time Predictive Simulation Outputs:
+  * Congestion Risk Percentage gauge (color-coded green/amber/red)
+  * Estimated Evacuation Clearance Time (in minutes)
+- 1-Click Crisis Scenario Triggers:
+  * Fire Alarm Evacuation Drill (turns Main Block red, triggers alarms)
+  * 3-Phase Power Grid Fluctuation (turns Mech Labs amber)
+  * Core 10Gbps Fiber Backbone Cut (turns Library red)
+  * Reset All Nominals (restores campus to green)
+
+Module 4: Lifeline Mesh Emergency SOS
+- Emergency SOS Dispatch panel with category selector (Medical Trauma, Campus Security,
+  Fire / Hazmat, Structural Hazard).
+- Opt-in GPS & BLE Location Sharing toggle (accurate within ±1.8 meters).
+- Autonomous Peer-to-Peer Mesh Node telemetry: Monitors 4 campus mesh gateway nodes
+  with live latency and signal hops.
+- High-priority "BROADCAST SOS DISPATCH" trigger with simulated emergency dispatch
+  confirmation (e.g., "Campus Quick-Reaction Medical Van #1 Dispatched").
+
+Module 5: Executive Command Center
+- Holistic executive overview: System Health Score (92%), Telemetry Uptime (99.8%),
+  and active incident tally.
+- Autonomous AI Facility Directives & Recommendations (e.g., pre-cooling convention
+  auditorium ahead of events, preventive chiller lubrication, spare reorders).
+- Complete RAG breakdown across all verified blocks.
+
+Module 6: Mobile Signals (CampusOps BLE Scanner Integration)
+- Direct integration with the built-in CampusOps Bluetooth Low Energy scanner.
+- Displays live anonymous device counts (e.g., 142 detected devices).
+- Radio frequency signal strength distribution:
+  * Strong (-50 dBm)
+  * Moderate (-75 dBm)
+  * Weak (-90 dBm)
+- Campus density mapping across key zones (Quadrangle, Central Library, Mech Labs).
+- Operates anonymously with zero personal data harvesting (MAC randomization compliant).
+
+
+7. RIGHT-SIDE DRAWERS & INTERACTIVE OVERLAYS
+--------------------------------------------------------------------------------
+A. Building Detail Drawer (Facility Intelligence)
+   - Opens when any building is clicked in 3D or chosen from the directory.
+   - Displays building category, exact GPS coordinates, and health status banner.
+   - Live IoT Telemetry: Power (kW), Ambient Temp (°C), Wi-Fi Clients, Fire Readiness (%),
+     Air Quality (AQI), and Water Pressure (PSI).
+   - Occupancy Bar: Real-time visual progress bar of current vs. maximum capacity.
+   - Department Listings: All academic departments, centers of excellence, and offices.
+   - Architectural Specs: Number of floors, built-up sq.ft, commissioned year, and
+     structural seismic classification.
+   - Emergency Contacts: Direct phone links for Principal, Chief Facility Officer,
+     and Department Heads.
+
+B. Operational Stream & Incident Log Drawer
+   - Slide-in feed of all active incident tickets and chronological system event logs.
+   - One-click incident resolution buttons to restore building health.
+   - Quick simulation trigger buttons.
+
+C. Report Incident Modal
+   - Clean enterprise modal dialog to report new incidents.
+   - Target building dropdown, floor/room input, category selector, severity radio buttons
+     (Critical / Attention / Normal), headline, description, and reporter identity.
+   - Submitting automatically updates the 3D building color, creates an incident ticket,
+     and logs an operational stream entry.
+
+
+8. DESIGN SYSTEM & UI PALETTE
+--------------------------------------------------------------------------------
+The interface strictly adheres to a clean, professional Light Enterprise design:
+- Background: Light slate (#F8FAFC / #F1F5F9)
+- Surface Cards & Modals: Pure white (#FFFFFF) with subtle border (#E2E8F0)
+- Primary Brand Blue: Sky / Ocean Blue (#0284C7 / #0369A1)
+- Teal Accent: Cyan / Teal (#0EA5E9 / #38BDF8)
+- Primary Text: Slate 900 (#0F172A)
+- Secondary Text: Slate 600 / 500 (#475569 / #64748B)
+- Operational RAG Tones:
+  * Green: #10B981 (Normal)
+  * Amber: #F59E0B (Attention Required)
+  * Red: #EF4444 (Critical Alert)
+  * Grey: #94A3B8 (No Data / Calibration)
+- Responsive: Fully optimized for desktop, tablet, and mobile screens.
+
+
+9. TECHNICAL ARCHITECTURE & DEPLOYMENT
+--------------------------------------------------------------------------------
+A. Production React Application:
+   - Root Folder: C:\Users\Sripriyan\.gemini\antigravity\scratch\campuspulse-os\
+   - Framework: React 18 with TypeScript and Vite
+   - 3D Engine: Three.js r165, @react-three/fiber, @react-three/drei
+   - Styling: Tailwind CSS 3.4
+   - Icons: Lucide React
+   - Build Status: Verified clean build (`npm run build`), 0 errors.
+
+B. Standalone HTML Visualizer:
+   - File: C:\Users\Sripriyan\.gemini\antigravity\scratch\campuspulse-3d.html
+   - Completely self-contained; can be double-clicked to open in any web browser.
+   - Integrates CesiumJS 1.114, Three.js r128, Tailwind CSS CDN, and the complete
+     Operations Suite without requiring a build step or server.
+
+C. Backend Device Intelligence (CampusOps):
+   - Location: C:\Users\Sripriyan\.gemini\antigravity\scratch\campuspulse-os\backend\
+   - Stack: Python 3.13, FastAPI, Bleak (Bluetooth Low Energy scanner)
+   - Real hardware scanning on Windows with automatic simulated demo fallback.
+
+================================================================================
+END OF SPECIFICATION — CAMPUSPULSE OS (SRM EASWARI ENGINEERING COLLEGE)
+================================================================================

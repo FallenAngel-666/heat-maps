@@ -1,0 +1,2406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CampusPulse OS | SRM Easwari Engineering College — Photorealistic 3D Digital Twin</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CesiumJS for Google Photorealistic 3D Tiles & Authentic Satellite -->
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+
+  <!-- Three.js & OrbitControls for Operational 3D View -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Google Inter & JetBrains Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              800: '#0c4a6e',
+              900: '#082f49'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: 'Inter', system-ui, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      background-color: #f8fafc;
+    }
+    #cesium-container, #three-container {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      outline: none;
+    }
+    /* Hide Cesium default widget overlays */
+    .cesium-viewer-bottom {
+      display: none !important;
+    }
+    .cesium-credit-logoContainer, .cesium-credit-textContainer {
+      display: inline-block !important;
+      font-size: 10px !important;
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    /* Operational Markers & Billboard Labels */
+    #labels-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      overflow: hidden;
+    }
+    .operational-label {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+      white-space: nowrap;
+    }
+    .operational-label:hover {
+      transform: translate(-50%, -108%) scale(1.05);
+    }
+    @keyframes alert-ping {
+      0% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.4); opacity: 0.2; }
+      100% { transform: scale(0.95); opacity: 0.9; }
+    }
+    .pulse-beacon {
+      animation: alert-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased overflow-hidden">
+
+  <!-- VIEWPORTS -->
+  <!-- 1. Cesium Container for Photorealistic 3D & Satellite Views -->
+  <div id="cesium-container"></div>
+
+  <!-- 2. Three.js Container for Operational 3D View -->
+  <div id="three-container" style="display: none;"></div>
+
+  <!-- 3. Screen-Space 3D Operational Labels Layer -->
+  <div id="labels-container"></div>
+
+  <!-- UI OVERLAY LAYER -->
+  <div class="relative z-20 flex flex-col h-screen pointer-events-none">
+
+    <!-- TOP ENTERPRISE HEADER -->
+    <header class="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 md:px-6 flex items-center justify-between pointer-events-auto shadow-xs select-none">
+      
+      <!-- Brand & Title with 3-Line Hamburger Menu -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleNavMenu()" title="Open CampusPulse Operations Menu (5 Core Modules + Mobile Signals)" class="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all border border-slate-200/80 shadow-2xs group">
+          <svg class="w-5 h-5 text-slate-700 group-hover:text-sky-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <svg class="w-5 h-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base md:text-lg font-bold text-slate-900 tracking-tight leading-none">
+              CampusPulse OS
+            </h1>
+            <span id="active-mode-badge" class="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200/70">
+              Photorealistic 3D
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+            <svg class="w-3.5 h-3.5 text-sky-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+            </svg>
+            <span class="font-semibold text-slate-800">SRM Easwari Engineering College</span>
+            <span class="text-slate-300">•</span>
+            <span class="text-slate-500 hidden sm:inline">Bharathi Salai, Ramapuram, Chennai</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: 3-MODE VIEW SWITCHER -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner">
+        <button id="mode-btn-satellite" onclick="switchViewMode('satellite')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+          <span>🛰️</span>
+          <span class="hidden md:inline">Satellite View</span>
+        </button>
+        <button id="mode-btn-photorealistic" onclick="switchViewMode('photorealistic')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5">
+          <span>🌍</span>
+          <span>Photorealistic 3D</span>
+        </button>
+        <button id="mode-btn-operational" onclick="switchViewMode('operational')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+          <span>🏢</span>
+          <span class="hidden md:inline">Operational 3D</span>
+        </button>
+      </div>
+
+      <!-- HEADER ACTIONS -->
+      <div class="flex items-center gap-2">
+        <!-- Configure Google API Key -->
+        <button onclick="openApiKeyModal()" title="Configure Google Maps API Key for Photorealistic 3D Tiles" class="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 transition-colors">
+          <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+          </svg>
+          <span>API Key</span>
+        </button>
+
+        <!-- Incident Drawer Toggle -->
+        <button onclick="toggleIncidentLog()" class="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors relative">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span class="hidden sm:inline">Incidents</span>
+          <span id="header-incident-indicator" class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        </button>
+
+        <!-- Report Incident Button -->
+        <button onclick="openReportModal()" class="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition-all active:scale-95">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Report Incident</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- HEALTH METRICS BAR & RAG STATUS PILLS -->
+    <div class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs pointer-events-auto select-none shadow-2xs">
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">Easwari Campus Health:</span>
+        <button onclick="filterByHealth('all')" id="filter-all" class="px-2.5 py-1 rounded-full font-semibold transition-all flex items-center gap-1.5 bg-slate-900 text-white shadow-xs">
+          <span>All Facilities</span>
+          <span id="cnt-all" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700 font-mono">6</span>
+        </button>
+        <button onclick="filterByHealth('green')" id="filter-green" class="px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span>Normal</span>
+          <span id="cnt-green" class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-700/10 font-mono font-bold">4</span>
+        </button>
+        <button onclick="filterByHealth('amber')" id="filter-amber" class="px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>Attention</span>
+          <span id="cnt-amber" class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-700/10 font-mono font-bold">1</span>
+        </button>
+        <button onclick="filterByHealth('red')" id="filter-red" class="px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 bg-red-50 text-red-700 hover:bg-red-100 border border-red-200">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span>
+          <span>Critical</span>
+          <span id="cnt-red" class="px-1.5 py-0.2 rounded-full text-[10px] bg-red-700/10 font-mono font-bold">0</span>
+        </button>
+        <button onclick="filterByHealth('grey')" id="filter-grey" class="px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200">
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span>No Data</span>
+          <span id="cnt-grey" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-700/10 font-mono">1</span>
+        </button>
+      </div>
+
+      <!-- Campus Stats -->
+      <div class="hidden sm:flex items-center gap-4 text-slate-600">
+        <div class="flex items-center gap-1.5">
+          <span class="text-sky-600 font-semibold">Reliability Index:</span>
+          <span id="summary-health-score" class="font-mono font-bold text-slate-900">92%</span>
+        </div>
+        <div class="h-3 w-px bg-slate-200"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-500">Easwari Area:</span>
+          <span class="font-mono font-semibold text-slate-800">Bharathi Salai Campus (28.4 Acres)</span>
+        </div>
+        <div class="h-3 w-px bg-slate-200"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-emerald-600 font-semibold">Live Monitored:</span>
+          <span class="font-mono font-semibold text-slate-800">6 Verified Blocks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Space for 3D exploration -->
+    <div class="flex-1 w-full pointer-events-none"></div>
+
+    <!-- BOTTOM-LEFT: GOOGLE MAPS COMPLIANCE ATTRIBUTION BAR -->
+    <div id="google-attribution-bar" class="absolute bottom-4 left-4 z-20 pointer-events-auto flex items-center gap-3 bg-white/90 backdrop-blur-md border border-slate-200 px-3 py-1.5 rounded-xl shadow-md text-[10px] text-slate-600">
+      <div class="flex items-center gap-1 font-semibold text-slate-800">
+        <span class="text-blue-500 font-bold">G</span><span class="text-red-500 font-bold">o</span><span class="text-yellow-500 font-bold">o</span><span class="text-blue-500 font-bold">g</span><span class="text-green-500 font-bold">l</span><span class="text-red-500 font-bold">e</span>
+        <span>Maps Platform</span>
+      </div>
+      <div class="w-px h-3 bg-slate-300"></div>
+      <span id="attribution-text">Imagery ©2026 Google Earth, CNES / Airbus, Maxar Technologies</span>
+      <div id="cesium-credits" class="inline"></div>
+    </div>
+
+    <!-- BOTTOM-RIGHT: REALISTIC CAMPUS EXPLORATION TOOLBAR -->
+    <div class="absolute bottom-6 right-6 z-20 flex flex-col items-end gap-2.5 select-none pointer-events-auto">
+
+      <!-- Perspective & Cardinal Compass Controls -->
+      <div class="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-lg flex items-center gap-1">
+        <!-- North View -->
+        <button onclick="setPerspective('north')" title="View Looking North" class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-sky-600 transition-colors">
+          N
+        </button>
+        <button onclick="setPerspective('south')" title="View Looking South" class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-sky-600 transition-colors">
+          S
+        </button>
+        <button onclick="setPerspective('east')" title="View Looking East" class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-sky-600 transition-colors">
+          E
+        </button>
+        <button onclick="setPerspective('west')" title="View Looking West" class="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-sky-600 transition-colors">
+          W
+        </button>
+        <div class="w-px h-4 bg-slate-200"></div>
+        <!-- Top-Down Nadir View -->
+        <button onclick="setPerspective('top-down')" title="Top-Down Satellite View (90°)" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+          Top-Down
+        </button>
+        <!-- 45° Angled 3D View -->
+        <button onclick="setPerspective('oblique')" title="45° Angled Photorealistic 3D View" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+          Angled 3D
+        </button>
+      </div>
+
+      <!-- Building Focus Selector -->
+      <div class="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-lg flex items-center gap-1">
+        <select id="building-focus-select" onchange="focusBuildingFromSelect(this.value)" class="bg-transparent text-xs font-semibold text-slate-800 py-1.5 px-3 rounded-xl hover:bg-slate-100 cursor-pointer focus:outline-none transition-colors border-0">
+          <option value="all">📍 SRM Easwari Campus Overview</option>
+          <option value="EEC-MAIN-01">🏛️ Main Academic & Admin Block</option>
+          <option value="EEC-MECH-02">⚙️ Mechanical & Civil Labs</option>
+          <option value="EEC-LIB-03">📚 Central Library & Convention Hall</option>
+          <option value="EEC-PG-04">🎓 PG & Technology Center</option>
+          <option value="EEC-SPORT-05">🏀 Sports Arena & Pavilion</option>
+          <option value="EEC-GATE-06">🚪 Main Gate (Bharathi Salai)</option>
+        </select>
+      </div>
+
+      <!-- Camera Action Strip -->
+      <div class="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-lg flex items-center gap-1.5">
+        <!-- Reset Camera -->
+        <button onclick="resetCampusCamera()" title="Reset Camera to Campus Overview" class="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center">
+          <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+
+        <div class="w-px h-5 bg-slate-200"></div>
+
+        <!-- 360° Turntable Tour -->
+        <button id="btn-auto-rotate" onclick="toggleAutoTour()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span class="hidden sm:inline">360° Tour</span>
+        </button>
+
+        <div class="w-px h-5 bg-slate-200"></div>
+
+        <!-- Toggle Operational Overlays -->
+        <button id="btn-overlays-toggle" onclick="toggleOperationalOverlays()" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white transition-all flex items-center gap-1.5 shadow-xs">
+          <svg class="w-3.5 h-3.5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <span class="hidden sm:inline">Overlays</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HAMBURGER NAVIGATION DRAWER & 5 CORE MODULES -->
+  <div id="nav-drawer-backdrop" onclick="closeNavMenu()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 hidden transition-opacity"></div>
+  <aside id="nav-drawer" class="fixed inset-y-0 left-0 w-full sm:w-[580px] bg-white h-full shadow-2xl z-50 flex flex-col border-r border-slate-200 transition-transform duration-300 transform -translate-x-full select-none">
+    
+    <!-- Drawer Header -->
+    <div class="h-16 px-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400">
+          <svg class="w-4 h-4 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+            CampusPulse OS
+            <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-400/30">
+              Operations Suite
+            </span>
+          </h2>
+          <p class="text-[11px] text-slate-400">SRM Easwari Engineering College</p>
+        </div>
+      </div>
+
+      <button onclick="closeNavMenu()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors" title="Close Menu (Esc)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- 6 Module Navigation Strip -->
+    <div class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+      <button onclick="switchNavTab('health-map')" id="nav-tab-btn-health-map" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-sky-600 text-white shadow-xs">
+        1. Health Map
+      </button>
+      <button onclick="switchNavTab('incident-engine')" id="nav-tab-btn-incident-engine" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+        2. Incident Engine
+      </button>
+      <button onclick="switchNavTab('digital-twin')" id="nav-tab-btn-digital-twin" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+        3. Digital Twin
+      </button>
+      <button onclick="switchNavTab('lifeline-sos')" id="nav-tab-btn-lifeline-sos" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+        4. Lifeline SOS
+      </button>
+      <button onclick="switchNavTab('command-center')" id="nav-tab-btn-command-center" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-200/60">
+        5. Command Center
+      </button>
+      <button onclick="switchNavTab('mobile-signals')" id="nav-tab-btn-mobile-signals" class="nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200">
+        6. Mobile Signals
+      </button>
+    </div>
+
+    <!-- Scrollable Module Content Body -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+
+      <!-- TAB 1: HEALTH MAP -->
+      <div id="nav-content-health-map" class="nav-tab-content space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Easwari Facilities Health Roster</h3>
+            <p class="text-[11px] text-slate-500">Live operational status across all 6 verified blocks</p>
+          </div>
+          <span class="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">92% Reliable</span>
+        </div>
+        <div id="nav-health-map-list" class="space-y-2.5"></div>
+      </div>
+
+      <!-- TAB 2: UNIFIED INCIDENT ENGINE -->
+      <div id="nav-content-incident-engine" class="nav-tab-content space-y-4 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Unified Incident Engine</h3>
+            <p class="text-[11px] text-slate-500">Certified technicians, critical spares & work order dispatch</p>
+          </div>
+          <button onclick="openReportModal()" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-2xs">
+            + New Ticket
+          </button>
+        </div>
+
+        <!-- Technicians list -->
+        <div class="space-y-2">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">On-Duty Technicians</span>
+          <div id="nav-tech-list" class="space-y-2"></div>
+        </div>
+
+        <!-- Critical Spares -->
+        <div class="space-y-2 pt-2 border-t border-slate-100">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Critical Spare-Parts Inventory</span>
+          <div id="nav-inventory-list" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: DIGITAL TWIN SIMULATOR -->
+      <div id="nav-content-digital-twin" class="nav-tab-content space-y-4 hidden">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Digital Twin Crisis & Evacuation Simulator</h3>
+          <p class="text-[11px] text-slate-500">Simulate crowd spikes, gate bottlenecks, and emergency evacuation drills</p>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3.5">
+          <div>
+            <div class="flex justify-between font-semibold text-slate-700 mb-1 text-[11px]">
+              <span>Campus Crowd Estimate</span>
+              <span id="nav-sim-crowd-val" class="font-mono text-sky-700">1,850 students</span>
+            </div>
+            <input type="range" id="nav-sim-crowd-slider" min="500" max="5000" step="50" value="1850" oninput="updateSimCalculations()" class="w-full accent-sky-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between font-semibold text-slate-700 mb-1 text-[11px]">
+              <span>Active Security & Facility Staff</span>
+              <span id="nav-sim-staff-val" class="font-mono text-sky-700">22 officers</span>
+            </div>
+            <input type="range" id="nav-sim-staff-slider" min="5" max="50" step="1" value="22" oninput="updateSimCalculations()" class="w-full accent-sky-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between font-semibold text-slate-700 mb-1 text-[11px]">
+              <span>Open Campus Gates</span>
+              <span id="nav-sim-gate-val" class="font-mono text-sky-700">2 gates</span>
+            </div>
+            <input type="range" id="nav-sim-gate-slider" min="1" max="3" step="1" value="2" oninput="updateSimCalculations()" class="w-full accent-sky-600">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 bg-white border border-slate-200 rounded-xl">
+            <span class="text-slate-500 block text-[10px]">Congestion Risk</span>
+            <div id="nav-sim-risk-val" class="text-xl font-bold font-mono text-emerald-600 mt-1">38%</div>
+          </div>
+          <div class="p-3 bg-white border border-slate-200 rounded-xl">
+            <span class="text-slate-500 block text-[10px]">Predicted Clearance</span>
+            <div id="nav-sim-time-val" class="text-xl font-bold font-mono text-sky-600 mt-1">7.8 mins</div>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Trigger 1-Click Simulation Scenario</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="triggerQuickSimulation('fire')" class="p-2.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-900 border border-red-200 text-left font-semibold transition-colors">
+              🔥 Fire Drill Scenario
+            </button>
+            <button onclick="triggerQuickSimulation('power')" class="p-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-left font-semibold transition-colors">
+              ⚡ Power Grid Fluctuation
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: LIFELINE MESH SOS -->
+      <div id="nav-content-lifeline-sos" class="nav-tab-content space-y-4 hidden">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Lifeline Mesh Emergency SOS</h3>
+          <p class="text-[11px] text-slate-500">Autonomous peer-to-peer campus emergency dispatch & beaconing</p>
+        </div>
+
+        <div class="p-4 bg-red-50 border border-red-200 rounded-xl space-y-3.5">
+          <div class="space-y-1.5">
+            <span class="font-bold text-red-900 text-[11px] block">Emergency Alert Type</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setHtmlSosCategory('Medical')" class="sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-red-600 text-white border-red-700">Medical</button>
+              <button onclick="setHtmlSosCategory('Security')" class="sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-white text-slate-700 border-red-200">Security</button>
+              <button onclick="setHtmlSosCategory('Fire')" class="sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-white text-slate-700 border-red-200">Fire</button>
+              <button onclick="setHtmlSosCategory('Structural')" class="sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-white text-slate-700 border-red-200">Structural</button>
+            </div>
+          </div>
+
+          <button onclick="broadcastHtmlSos()" class="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md transition-all active:scale-98">
+            🚨 BROADCAST EMERGENCY SOS
+          </button>
+        </div>
+
+        <div class="space-y-2">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Live Dispatch Beacon Log</span>
+          <div id="nav-sos-log" class="space-y-2">
+            <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+              <div class="flex justify-between font-mono text-[10px] text-red-600 font-bold">
+                <span>SOS-001 • Medical Trauma</span>
+                <span class="text-slate-400">15:10:04</span>
+              </div>
+              <p class="font-bold text-slate-800">Easwari Main Academic Block</p>
+              <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-semibold">✓ Dispatched: Campus Medical Van #1</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: COMMAND CENTER -->
+      <div id="nav-content-command-center" class="nav-tab-content space-y-4 hidden">
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">Executive Command Center</h3>
+          <p class="text-[11px] text-slate-500">Integrated telemetry indices, uptime, and AI mitigation advisory</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <span class="text-[10px] text-slate-500">System Health</span>
+            <div class="text-lg font-bold font-mono text-emerald-600">92%</div>
+          </div>
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <span class="text-[10px] text-slate-500">Telemetry Uptime</span>
+            <div class="text-lg font-bold font-mono text-slate-800">99.8%</div>
+          </div>
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+            <span class="text-[10px] text-slate-500">Active Incidents</span>
+            <div class="text-lg font-bold font-mono text-amber-600">1</div>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-sky-50 border border-sky-200 rounded-xl space-y-1.5">
+          <span class="font-bold text-sky-900 text-[11px] block">✨ Automated Operational Directives</span>
+          <ul class="text-slate-700 space-y-1 list-disc pl-4 text-[11px]">
+            <li>Pre-cool Central Library auditorium ahead of scheduled 14:00 guest lecture.</li>
+            <li>Maintain preventive watch on Mech Labs chiller loop #2 vibration.</li>
+            <li>Verify South Gate 1 visitor RFID credentials sync.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- TAB 6: MOBILE SIGNALS (CampusOps BLE Integration) -->
+      <div id="nav-content-mobile-signals" class="nav-tab-content space-y-4 hidden">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Mobile Signals • CampusOps Intelligence</h3>
+            <p class="text-[11px] text-slate-500">Anonymous Bluetooth LE radio frequency occupancy detection</p>
+          </div>
+          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+            BLE Active
+          </span>
+        </div>
+
+        <div class="p-4 bg-slate-900 text-white rounded-xl space-y-3">
+          <div class="flex justify-between items-baseline">
+            <span class="text-slate-400 text-[11px]">Total Anonymous Devices Detected</span>
+            <span class="text-2xl font-bold font-mono text-cyan-400">142</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800 text-[10px] text-center">
+            <div>
+              <span class="text-slate-400 block">Strong (-50dBm)</span>
+              <span class="font-mono font-bold text-emerald-400">48</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block">Moderate (-75dBm)</span>
+              <span class="font-mono font-bold text-yellow-400">67</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block">Weak (-90dBm)</span>
+              <span class="font-mono font-bold text-slate-400">27</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <span class="font-bold text-slate-700 uppercase tracking-wider text-[10px] block">Campus Density Zones</span>
+          <div class="space-y-2">
+            <div class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center">
+              <div>
+                <span class="font-bold text-slate-800 block">Main Academic Quadrangle</span>
+                <span class="text-slate-500 text-[11px]">EEC-MAIN-01 • Radius 32m</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 font-mono">68 Devices</span>
+            </div>
+            <div class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center">
+              <div>
+                <span class="font-bold text-slate-800 block">Central Library Reading Halls</span>
+                <span class="text-slate-500 text-[11px]">EEC-LIB-03 • Radius 24m</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 font-mono">44 Devices</span>
+            </div>
+            <div class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center">
+              <div>
+                <span class="font-bold text-slate-800 block">Mechanical & Civil Labs</span>
+                <span class="text-slate-500 text-[11px]">EEC-MECH-02 • Radius 20m</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 font-mono">30 Devices</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer -->
+    <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+      <span>SRM Easwari Engineering College • Chennai</span>
+      <button onclick="triggerQuickSimulation('reset')" class="text-sky-600 hover:text-sky-800 font-semibold">
+        Reset All Statuses
+      </button>
+    </div>
+  </aside>
+
+  <!-- BUILDING DETAIL DRAWER (Facility Intelligence) -->
+  <aside id="building-drawer" class="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 transform translate-x-full select-none">
+    <div class="p-5 border-b border-slate-200/80 flex items-start justify-between gap-3 bg-slate-50/70">
+      <div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span id="drawer-bldg-id" class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800">EEC-MAIN-01</span>
+          <span class="text-xs text-slate-400">•</span>
+          <span id="drawer-bldg-category" class="text-xs uppercase font-semibold tracking-wider text-slate-500">Academic</span>
+        </div>
+        <h2 id="drawer-bldg-name" class="text-lg font-bold text-slate-900 leading-tight">Easwari Main Academic & Admin Block</h2>
+        <p id="drawer-bldg-coords" class="text-[11px] font-mono text-slate-400 mt-0.5">13.0332° N, 80.1792° E</p>
+      </div>
+      <button onclick="closeBuildingDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-5 space-y-6 text-xs">
+      <!-- Health Status Banner -->
+      <div id="drawer-status-box" class="p-4 rounded-xl border flex items-center justify-between gap-3 bg-emerald-50 border-emerald-200 text-emerald-800">
+        <div class="flex items-center gap-3">
+          <span id="drawer-status-icon" class="w-5 h-5 flex items-center justify-center">🟢</span>
+          <div>
+            <p id="drawer-status-title" class="font-bold text-xs">Normal Operational Health</p>
+            <p id="drawer-status-desc" class="text-[11px] opacity-85 mt-0.5">All structural, electrical, and HVAC subsystems nominal.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <button onclick="reportForCurrentBuilding()" class="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span>Report Incident</span>
+        </button>
+        <button onclick="focusCurrentBuilding()" class="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors border border-slate-200">
+          <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          <span>Focus 3D View</span>
+        </button>
+      </div>
+
+      <!-- Active Incidents for this building -->
+      <div id="drawer-incidents-section" class="space-y-2.5">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>Active Building Alerts (<span id="drawer-incident-count">0</span>)</span>
+        </h3>
+        <div id="drawer-incidents-list" class="space-y-2"></div>
+      </div>
+
+      <!-- Live IoT Telemetry Grid -->
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Live Sensor Telemetry</h3>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">⚡ Power Load</span>
+            <p id="drawer-power" class="text-base font-bold font-mono text-slate-800">142.5 kW</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">🌡️ Ambient Temp</span>
+            <p id="drawer-temp" class="text-base font-bold font-mono text-slate-800">24.2 °C</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">📶 Wi-Fi Clients</span>
+            <p id="drawer-wifi" class="text-base font-bold font-mono text-slate-800">860 devices</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">🧯 Fire Readiness</span>
+            <p id="drawer-fire" class="text-base font-bold font-mono text-slate-800">98%</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">🍃 Air Quality</span>
+            <p id="drawer-aqi" class="text-base font-bold font-mono text-slate-800">48 AQI</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-[11px] text-slate-500 block mb-1">💧 Water Pressure</span>
+            <p id="drawer-water" class="text-base font-bold font-mono text-slate-800">58 PSI</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Capacity & Occupancy -->
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-semibold text-slate-700">Occupancy Status</span>
+          <span id="drawer-occupancy-text" class="font-mono font-bold text-slate-900">1,840 / 2,200 (84%)</span>
+        </div>
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div id="drawer-occupancy-bar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 84%"></div>
+        </div>
+      </div>
+
+      <!-- Departments in this block -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Departments & Centers</h3>
+        <ul id="drawer-departments" class="space-y-1.5"></ul>
+      </div>
+
+      <!-- Architectural Specs -->
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+        <h3 class="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Architectural Specs</h3>
+        <div class="grid grid-cols-2 gap-y-2 text-slate-600">
+          <div><span class="text-slate-400 block text-[10px]">Floors</span><span id="drawer-floors" class="font-semibold text-slate-800">5 Levels (G + 4)</span></div>
+          <div><span class="text-slate-400 block text-[10px]">Built-up Area</span><span id="drawer-area" class="font-semibold text-slate-800">145,000 sq.ft</span></div>
+          <div><span class="text-slate-400 block text-[10px]">Commissioned</span><span id="drawer-year" class="font-semibold text-slate-800">1996</span></div>
+          <div><span class="text-slate-400 block text-[10px]">Structure Class</span><span class="font-semibold text-slate-800">RCC Tier-1 Earthquake Resistant</span></div>
+        </div>
+      </div>
+
+      <!-- Emergency Contacts -->
+      <div class="space-y-2">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Building Officers</h3>
+        <div id="drawer-contacts" class="space-y-2"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- OPERATIONAL STREAM & INCIDENTS DRAWER -->
+  <aside id="incidents-drawer" class="fixed inset-y-0 right-0 w-full sm:w-[460px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 transform translate-x-full select-none">
+    <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/60">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+          🚨
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-slate-900 leading-none">Operational Stream & Incidents</h2>
+          <p class="text-xs text-slate-500 mt-1">CampusPulse OS real-time telemetry & dispatch</p>
+        </div>
+      </div>
+      <button onclick="closeIncidentLog()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- 1-Click Interactive 3D Simulators -->
+    <div class="p-4 bg-slate-50 border-b border-slate-200 space-y-2">
+      <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">✨ 1-Click Incident Simulators</span>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button onclick="triggerQuickSimulation('fire')" class="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-left font-medium transition-colors">
+          🔥 Fire Alarm (Turn Red)
+        </button>
+        <button onclick="triggerQuickSimulation('power')" class="p-2 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-left font-medium transition-colors">
+          ⚡ Power Surge (Turn Amber)
+        </button>
+        <button onclick="triggerQuickSimulation('network')" class="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-left font-medium transition-colors">
+          🌐 Fiber Cut (Turn Red)
+        </button>
+        <button onclick="triggerQuickSimulation('reset')" class="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-left font-medium transition-colors">
+          ✅ Restore All (Turn Green)
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Tickets List -->
+    <div class="flex-1 overflow-y-auto p-5 space-y-3">
+      <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">Active Incident Tickets</h3>
+      <div id="incidents-list" class="space-y-3"></div>
+
+      <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mt-6 mb-2">Recent Event Stream</h3>
+      <div id="events-stream-list" class="space-y-2"></div>
+    </div>
+  </aside>
+
+  <!-- INCIDENT REPORTING MODAL -->
+  <div id="incident-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in duration-150">
+      <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Report Campus Incident</h3>
+          <p class="text-xs text-slate-500">Automatically synchronizes 3D building operational status</p>
+        </div>
+        <button onclick="closeReportModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form onsubmit="handleReportSubmit(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Target Facility (Easwari Campus)</label>
+          <select id="modal-building-select" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Floor / Room</label>
+            <input type="text" id="modal-floor" value="Floor 2 - Central Wing" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500" required>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Category</label>
+            <select id="modal-category" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500">
+              <option value="Electrical">Electrical</option>
+              <option value="Fire/Safety">Fire / Safety</option>
+              <option value="HVAC">HVAC / Cooling</option>
+              <option value="Water/Plumbing">Water / Plumbing</option>
+              <option value="Network/IT">Network / IT</option>
+              <option value="Structural">Structural / Civil</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1.5">Severity Level</label>
+          <div class="grid grid-cols-3 gap-2.5">
+            <label class="p-3 rounded-xl border cursor-pointer flex flex-col justify-between bg-red-50 text-red-900 border-red-300">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold">Critical</span>
+                <input type="radio" name="severity" value="critical" checked class="accent-red-600">
+              </div>
+              <span class="text-[10px] text-red-600 font-medium">Turns 3D to Red</span>
+            </label>
+            <label class="p-3 rounded-xl border cursor-pointer flex flex-col justify-between bg-amber-50 text-amber-900 border-amber-300">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold">Attention</span>
+                <input type="radio" name="severity" value="attention" class="accent-amber-600">
+              </div>
+              <span class="text-[10px] text-amber-600 font-medium">Turns 3D to Amber</span>
+            </label>
+            <label class="p-3 rounded-xl border cursor-pointer flex flex-col justify-between bg-emerald-50 text-emerald-900 border-emerald-300">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold">Normal</span>
+                <input type="radio" name="severity" value="normal" class="accent-emerald-600">
+              </div>
+              <span class="text-[10px] text-emerald-600 font-medium">Turns 3D to Green</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Incident Headline</label>
+          <input type="text" id="modal-title" placeholder="e.g. Substation Transformer Overheat Warning" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500" required>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Description & Maintenance Status</label>
+          <textarea id="modal-desc" rows="2" placeholder="Specify observations, safety protocols triggered..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Reported By</label>
+          <input type="text" id="modal-reporter" value="Campus Safety Supervisor" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500" required>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeReportModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition-colors">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">Broadcast & Update 3D Overlay</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- GOOGLE MAPS API KEY CONFIGURATION MODAL -->
+  <div id="apikey-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 select-none hidden">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in duration-150">
+      <div class="p-5 border-b border-slate-200/80 flex items-center justify-between bg-slate-50/70">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">Google Maps Platform 3D Tiles</h3>
+          <p class="text-xs text-slate-500">Configure your API Key for Photorealistic 3D Tiles</p>
+        </div>
+        <button onclick="closeApiKeyModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <p class="text-slate-600 leading-relaxed">
+          Google Maps Platform's <strong>Map Tiles API</strong> provides high-resolution, textured 3D mesh models of buildings and terrain for major cities including Chennai.
+        </p>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Google Maps API Key</label>
+          <input type="password" id="input-google-api-key" placeholder="AIzaSy..." class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <p class="text-[11px] text-slate-400 mt-1">Requires <em>Map Tiles API</em> enabled in Google Cloud Console.</p>
+        </div>
+
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
+          <strong>Note:</strong> If no API key is provided, CampusPulse OS seamlessly utilizes the high-resolution <strong>Satellite View</strong> and <strong>Operational 3D Digital Twin</strong> with zero interruption.
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2.5">
+          <button type="button" onclick="closeApiKeyModal()" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium transition-colors">Close</button>
+          <button type="button" onclick="saveApiKey()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs transition-colors">Apply & Load 3D Tiles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CORE LOGIC & GEOSPATIAL RENDERING SCRIPT -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. VERIFIED SRM EASWARI ENGINEERING COLLEGE DATA
+    // -------------------------------------------------------------
+    // Exact GPS Coordinates for SRM Easwari Engineering College:
+    // Latitude: 13.0335° N, Longitude: 80.1795° E (Bharathi Salai, Ramapuram)
+    const CAMPUS_CENTER = {
+      longitude: 80.1795,
+      latitude: 13.0335,
+      height: 320 // meters
+    };
+
+    // Strictly SRM Easwari Engineering College Facilities (Not entire Ramapuram)
+    const EASWARI_BUILDINGS = [
+      {
+        id: 'EEC-MAIN-01',
+        name: 'Easwari Main Academic & Admin Block',
+        shortName: 'Main Block',
+        code: 'EEC-01',
+        category: 'Academic',
+        lat: 13.0332,
+        lng: 80.1792,
+        heightM: 22,
+        // Three.js local relative coords:
+        localPos: [-6, 0, 30],
+        localDim: [30, 12, 16],
+        floors: 5,
+        builtYear: 1996,
+        areaSqFt: 145000,
+        capacity: 2200,
+        occupancy: 1840,
+        departments: [
+          'Computer Science & Engineering (CSE)',
+          'Information Technology (IT)',
+          'Artificial Intelligence & Data Science (AI&DS)',
+          'Electronics & Communication (ECE)',
+          'Principal & Dean Executive Suites'
+        ],
+        healthStatus: 'green',
+        powerKw: 142.5,
+        tempC: 24.2,
+        wifiClients: 860,
+        fireReadiness: 98,
+        aqi: 48,
+        waterPsi: 58,
+        contacts: [
+          { name: 'Dr. K. Kathiravan', role: 'Principal', phone: '+91 44 4392 3041' },
+          { name: 'Mr. R. Sundaram', role: 'Chief Facility Officer', phone: '+91 94440 18293' }
+        ]
+      },
+      {
+        id: 'EEC-MECH-02',
+        name: 'Easwari Mechanical & Civil Labs Complex',
+        shortName: 'Mech & Civil Labs',
+        code: 'EEC-02',
+        category: 'Academic',
+        lat: 13.0334,
+        lng: 80.1785,
+        heightM: 16,
+        localPos: [-26, 0, 20],
+        localDim: [18, 9, 20],
+        floors: 3,
+        builtYear: 1999,
+        areaSqFt: 62000,
+        capacity: 750,
+        occupancy: 490,
+        departments: [
+          'Mechanical Engineering Labs',
+          'Civil Engineering & Heavy Structures Lab',
+          'Advanced Robotics & Mechatronics COE',
+          'Strength of Materials Workshop'
+        ],
+        healthStatus: 'green',
+        powerKw: 98.4,
+        tempC: 25.8,
+        wifiClients: 240,
+        fireReadiness: 96,
+        aqi: 52,
+        waterPsi: 52,
+        contacts: [{ name: 'Dr. M. Senthil', role: 'Lab Superintendent', phone: '+91 98402 44109' }]
+      },
+      {
+        id: 'EEC-LIB-03',
+        name: 'Easwari Central Library & Convention Hall',
+        shortName: 'Central Library',
+        code: 'EEC-03',
+        category: 'Library',
+        lat: 13.0331,
+        lng: 80.1800,
+        heightM: 18,
+        localPos: [18, 0, 30],
+        localDim: [20, 11, 15],
+        floors: 4,
+        builtYear: 2004,
+        areaSqFt: 54000,
+        capacity: 1100,
+        occupancy: 620,
+        departments: [
+          'Centralized Digital Knowledge Repository',
+          'IEEE & ScienceDirect Electronic Access Center',
+          'Dr. T.R. Paarivendhar Auditorium (800 Seater)',
+          'Research & Patent Incubation Cell'
+        ],
+        healthStatus: 'amber',
+        powerKw: 76.2,
+        tempC: 26.5,
+        wifiClients: 480,
+        fireReadiness: 94,
+        aqi: 58,
+        waterPsi: 54,
+        contacts: [{ name: 'Dr. P. Nirmala', role: 'Chief Librarian', phone: '+91 44 4392 3110' }]
+      },
+      {
+        id: 'EEC-PG-04',
+        name: 'Easwari PG & Technology Research Center',
+        shortName: 'PG & Tech Block',
+        code: 'EEC-04',
+        category: 'Academic',
+        lat: 13.0339,
+        lng: 80.1802,
+        heightM: 18,
+        localPos: [22, 0, -18],
+        localDim: [20, 10, 16],
+        floors: 4,
+        builtYear: 2015,
+        areaSqFt: 48000,
+        capacity: 800,
+        occupancy: 410,
+        departments: [
+          'M.E. Structural Engineering',
+          'M.E. Computer Science & Engineering',
+          'Cloud Computing COE',
+          'Corporate Placement & Interview Suites'
+        ],
+        healthStatus: 'grey',
+        powerKw: 42.1,
+        tempC: 24.8,
+        wifiClients: 190,
+        fireReadiness: 92,
+        aqi: 51,
+        waterPsi: 48,
+        contacts: [{ name: 'Dr. T. Murugan', role: 'Placement Director', phone: '+91 44 4392 3150' }]
+      },
+      {
+        id: 'EEC-SPORT-05',
+        name: 'Easwari Sports Arena & Outdoor Pavilion',
+        shortName: 'Sports Arena',
+        code: 'EEC-05',
+        category: 'Sports',
+        lat: 13.0336,
+        lng: 80.1807,
+        heightM: 10,
+        localPos: [42, 0, 32],
+        localDim: [22, 6, 16],
+        floors: 2,
+        builtYear: 2012,
+        areaSqFt: 42000,
+        capacity: 500,
+        occupancy: 180,
+        departments: [
+          'Department of Physical Education',
+          'Indoor Badminton & Table Tennis Complex',
+          'Student Gymnasium & Fitness Pavilion'
+        ],
+        healthStatus: 'green',
+        powerKw: 34.0,
+        tempC: 26.0,
+        wifiClients: 120,
+        fireReadiness: 99,
+        aqi: 47,
+        waterPsi: 56,
+        contacts: [{ name: 'Dr. K. Manoharan', role: 'Physical Director', phone: '+91 94443 21908' }]
+      },
+      {
+        id: 'EEC-GATE-06',
+        name: 'Easwari Main Entrance Gate & Security Station',
+        shortName: 'Gate 1 (Bharathi Salai)',
+        code: 'EEC-06',
+        category: 'Utility',
+        lat: 13.0328,
+        lng: 80.1793,
+        heightM: 7,
+        localPos: [-5, 0, 42],
+        localDim: [16, 6, 3],
+        floors: 1,
+        builtYear: 1996,
+        areaSqFt: 4500,
+        capacity: 40,
+        occupancy: 15,
+        departments: [
+          'Campus Security & Visitor Access Control',
+          'Emergency Transit Command'
+        ],
+        healthStatus: 'green',
+        powerKw: 12.0,
+        tempC: 27.2,
+        wifiClients: 35,
+        fireReadiness: 100,
+        aqi: 50,
+        waterPsi: 60,
+        contacts: [{ name: 'Mr. G. Ravikumar', role: 'Security Chief', phone: '+91 98408 55432' }]
+      }
+    ];
+
+    // Initial Incidents
+    let incidents = [
+      {
+        id: 'INC-2026-081',
+        buildingId: 'EEC-LIB-03',
+        buildingName: 'Easwari Central Library & Convention Hall',
+        floorZone: 'Floor 3 - West HVAC Plant',
+        title: 'HVAC Chiller Motor Vibration Alert',
+        description: 'Thermal telemetry flagged abnormal vibration and heat buildup in condenser loop #2. Inspection team dispatched.',
+        severity: 'attention',
+        category: 'HVAC',
+        reportedAt: '12 mins ago',
+        reportedBy: 'IoT Building Management Sensor',
+        status: 'active'
+      }
+    ];
+
+    let eventLogs = [
+      { id: 'EVT-101', time: '15:18:02', bldg: 'Easwari Central Library', msg: 'HVAC Chiller Motor vibration warning flagged (26.5°C).', severity: 'amber' },
+      { id: 'EVT-102', time: '14:55:10', bldg: 'Easwari Main Academic Block', msg: 'Grid electrical feeder optimal tier verified. Nominal load 142.5 kW.', severity: 'green' },
+      { id: 'EVT-103', time: '14:20:45', bldg: 'Easwari PG & Tech Center', msg: 'IoT Gateway calibration mode active. Telemetry marked unmonitored (Grey).', severity: 'grey' }
+    ];
+
+    // -------------------------------------------------------------
+    // 2. STATE MANAGEMENT & VIEWPORT ENGINES
+    // -------------------------------------------------------------
+    let currentMode = 'photorealistic'; // 'satellite' | 'photorealistic' | 'operational'
+    let selectedBuildingId = null;
+    let autoTourActive = false;
+    let showOverlays = true;
+    let currentHealthFilter = 'all';
+
+    // Cesium State
+    let cesiumViewer = null;
+    let google3DTileset = null;
+    let cesiumEntities = [];
+    let googleApiKey = localStorage.getItem('campuspulse_google_maps_key') || '';
+
+    // Three.js State
+    let threeRenderer, threeScene, threeCamera, threeControls;
+    let threeBuildingMeshes = new Map();
+    let threeBeaconLights = new Map();
+
+    const STATUS_CFG = {
+      green: { hex: 0x10b981, cesiumColor: Cesium.Color.fromCssColorString('#10b981'), css: 'bg-emerald-500', name: 'Normal' },
+      amber: { hex: 0xf59e0b, cesiumColor: Cesium.Color.fromCssColorString('#f59e0b'), css: 'bg-amber-500', name: 'Attention' },
+      red: { hex: 0xef4444, cesiumColor: Cesium.Color.fromCssColorString('#ef4444'), css: 'bg-red-500', name: 'Critical' },
+      grey: { hex: 0x94a3b8, cesiumColor: Cesium.Color.fromCssColorString('#94a3b8'), css: 'bg-slate-400', name: 'No Data' }
+    };
+
+    // -------------------------------------------------------------
+    // 3. INITIALIZE CESIUMJS (Photorealistic 3D & Satellite)
+    // -------------------------------------------------------------
+    function initCesiumViewer() {
+      if (cesiumViewer) return;
+
+      cesiumViewer = new Cesium.Viewer('cesium-container', {
+        terrainProvider: undefined,
+        imageryProvider: false,
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: false,
+        sceneModePicker: false,
+        selectionIndicator: false,
+        navigationHelpButton: false,
+        animation: false,
+        timeline: false,
+        fullscreenButton: false,
+        vrButton: false,
+        creditContainer: 'cesium-credits'
+      });
+
+      // Camera config
+      cesiumViewer.scene.screenSpaceCameraController.enableCollisionDetection = true;
+      cesiumViewer.scene.globe.depthTestAgainstTerrain = true;
+
+      // Add High-Resolution Satellite Base Layer (ESRI World Imagery / OSM Satellite for Chennai)
+      const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        maximumLevel: 19,
+        credit: '© Esri, Maxar, Earthstar Geographics'
+      });
+      cesiumViewer.imageryLayers.addImageryProvider(satelliteProvider);
+
+      // Add Campus Boundary Polygon (SRM Easwari Engineering College only)
+      addEaswariCampusBoundary();
+
+      // Add Operational Overlays (Building Markers & Pins)
+      addCesiumBuildingMarkers();
+
+      // Handle building selection via clicking in Cesium
+      const handler = new Cesium.ScreenSpaceEventHandler(cesiumViewer.scene.canvas);
+      handler.setInputAction((movement) => {
+        const pickedObject = cesiumViewer.scene.pick(movement.position);
+        if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.buildingData) {
+          selectBuilding(pickedObject.id.buildingData.id);
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      // Try loading Google Photorealistic 3D Tiles if API key exists
+      loadGoogle3DTiles();
+
+      // Initial Fly-to SRM Easwari Engineering College
+      flyToEaswariOverview();
+    }
+
+    let satelliteDimMaskEntity = null;
+
+    // Add Easwari Campus Boundary Outline & Surrounding Residential Dimming Mask
+    function addEaswariCampusBoundary() {
+      // Precise bounding polygon surrounding SRM Easwari Engineering College on Bharathi Salai
+      const easwariBoundaryCoords = [
+        80.1782, 13.0326, // SW corner on Bharathi Salai
+        80.1812, 13.0327, // SE corner on Bharathi Salai
+        80.1811, 13.0343, // NE corner near sports complex & PG block
+        80.1781, 13.0342  // NW corner near mechanical workshop
+      ];
+
+      // 1. Clear Cyan Illuminated Boundary Outline
+      cesiumViewer.entities.add({
+        name: 'SRM Easwari Engineering College Boundary',
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(easwariBoundaryCoords),
+          material: Cesium.Color.fromCssColorString('#0284c7').withAlpha(0.08),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString('#38bdf8'),
+          outlineWidth: 4
+        }
+      });
+
+      // 2. Surrounding Residential Area Dimming Mask
+      // Outer polygon covering the wider Ramapuram area, with an inner cutout hole for Easwari campus
+      const outerBox = Cesium.Cartesian3.fromDegreesArray([
+        80.150, 13.010,
+        80.210, 13.010,
+        80.210, 13.060,
+        80.150, 13.060
+      ]);
+      const innerHole = [
+        new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray(easwariBoundaryCoords))
+      ];
+
+      satelliteDimMaskEntity = cesiumViewer.entities.add({
+        name: 'Easwari Campus Focus Dimming Mask',
+        polygon: {
+          hierarchy: new Cesium.PolygonHierarchy(outerBox, innerHole),
+          material: Cesium.Color.fromCssColorString('#0f172a').withAlpha(0.68)
+        },
+        show: false // Activated in satellite mode
+      });
+    }
+
+    // Add 3D Billboard Markers and Selection Rings in Cesium
+    function addCesiumBuildingMarkers() {
+      EASWARI_BUILDINGS.forEach((bldg) => {
+        const statusCfg = STATUS_CFG[bldg.healthStatus];
+
+        // 3D Operational Pin / Cylinder Marker
+        const marker = cesiumViewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, bldg.heightM + 12),
+          cylinder: {
+            length: 4,
+            topRadius: 1.5,
+            bottomRadius: 0.1,
+            material: statusCfg.cesiumColor.withAlpha(0.85)
+          },
+          buildingData: bldg
+        });
+
+        // Pulsing Base Ring
+        const ring = cesiumViewer.entities.add({
+          position: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, 2),
+          ellipse: {
+            semiMinorAxis: 16.0,
+            semiMajorAxis: 16.0,
+            material: statusCfg.cesiumColor.withAlpha(0.25),
+            outline: true,
+            outlineColor: statusCfg.cesiumColor,
+            outlineWidth: 2
+          },
+          buildingData: bldg
+        });
+
+        cesiumEntities.push({ id: bldg.id, marker, ring });
+      });
+    }
+
+    // Load Google Photorealistic 3D Tiles
+    async function loadGoogle3DTiles() {
+      if (!googleApiKey) return;
+
+      try {
+        if (google3DTileset) {
+          cesiumViewer.scene.primitives.remove(google3DTileset);
+        }
+
+        google3DTileset = await Cesium.Cesium3DTileset.fromUrl(
+          `https://tile.googleapis.com/v1/3dtiles/root.json?key=${googleApiKey}`,
+          {
+            showCreditsOnScreen: true
+          }
+        );
+
+        cesiumViewer.scene.primitives.add(google3DTileset);
+        document.getElementById('attribution-text').innerText = 'Google Maps Platform Photorealistic 3D Tiles ©2026 Google';
+      } catch (err) {
+        console.warn('Google 3D Tiles notice:', err);
+      }
+    }
+
+    // Fly to SRM Easwari Overview
+    function flyToEaswariOverview() {
+      if (!cesiumViewer) return;
+      cesiumViewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0018, CAMPUS_CENTER.height),
+        orientation: {
+          heading: Cesium.Math.toRadians(0), // North facing into Bharathi Salai
+          pitch: Cesium.Math.toRadians(-40),
+          roll: 0.0
+        },
+        duration: 1.8
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 4. INITIALIZE THREE.JS (Operational 3D Digital Twin)
+    // -------------------------------------------------------------
+    function initThreeScene() {
+      if (threeRenderer) return;
+
+      const container = document.getElementById('three-container');
+      threeScene = new THREE.Scene();
+      threeScene.background = new THREE.Color(0xf1f5f9);
+      threeScene.fog = new THREE.Fog(0xf1f5f9, 120, 260);
+
+      threeCamera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.5, 600);
+      threeCamera.position.set(0, 95, 105);
+
+      threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+      threeRenderer.setSize(window.innerWidth, window.innerHeight);
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      threeRenderer.shadowMap.enabled = true;
+      threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(threeRenderer.domElement);
+
+      threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+      threeControls.enableDamping = true;
+      threeControls.dampingFactor = 0.05;
+      threeControls.maxPolarAngle = Math.PI / 2.05;
+      threeControls.minDistance = 15;
+      threeControls.maxDistance = 220;
+      threeControls.target.set(0, 0, 10);
+
+      // Lights
+      threeScene.add(new THREE.AmbientLight(0xffffff, 0.75));
+      threeScene.add(new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 0.6));
+      const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+      sun.position.set(60, 90, 50);
+      sun.castShadow = true;
+      threeScene.add(sun);
+
+      // Environment
+      buildThreeEnvironment();
+
+      // Buildings
+      buildThreeBuildings();
+
+      // Animation Loop
+      animateThree();
+    }
+
+    function buildThreeEnvironment() {
+      // Terrain
+      const terrain = new THREE.Mesh(new THREE.PlaneGeometry(260, 220), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.9 }));
+      terrain.rotation.x = -Math.PI / 2;
+      terrain.position.y = -0.1;
+      terrain.receiveShadow = true;
+      threeScene.add(terrain);
+
+      // Easwari Campus Green Area
+      const lawn = new THREE.Mesh(new THREE.PlaneGeometry(160, 110), new THREE.MeshStandardMaterial({ color: 0xecfdf5, roughness: 0.8 }));
+      lawn.rotation.x = -Math.PI / 2;
+      lawn.position.set(2, 0.01, 14);
+      lawn.receiveShadow = true;
+      threeScene.add(lawn);
+
+      // Bharathi Salai (South Avenue)
+      const road = new THREE.Mesh(new THREE.PlaneGeometry(240, 14), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 }));
+      road.rotation.x = -Math.PI / 2;
+      road.position.set(0, 0.05, 48);
+      road.receiveShadow = true;
+      threeScene.add(road);
+
+      // Yellow Center Line
+      const yellowLine = new THREE.Mesh(new THREE.PlaneGeometry(230, 0.4), new THREE.MeshBasicMaterial({ color: 0xeab308 }));
+      yellowLine.rotation.x = -Math.PI / 2;
+      yellowLine.position.set(0, 0.06, 48);
+      threeScene.add(yellowLine);
+
+      // Subtle Holographic Coordinate Grid Overlay
+      const grid = new THREE.GridHelper(170, 34, 0x38bdf8, 0x94a3b8);
+      grid.position.set(-2, 0.025, 8);
+      threeScene.add(grid);
+
+      // Main Gate 1 Archway on Bharathi Salai
+      const archL = new THREE.Mesh(new THREE.BoxGeometry(1.4, 6, 1.4), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+      archL.position.set(-12, 3, 42);
+      threeScene.add(archL);
+      const archR = new THREE.Mesh(new THREE.BoxGeometry(1.4, 6, 1.4), new THREE.MeshStandardMaterial({ color: 0x0284c7 }));
+      archR.position.set(2, 3, 42);
+      threeScene.add(archR);
+      const archTop = new THREE.Mesh(new THREE.BoxGeometry(16, 1.2, 1.6), new THREE.MeshStandardMaterial({ color: 0x0369a1 }));
+      archTop.position.set(-5, 6.2, 42);
+      threeScene.add(archTop);
+
+      // Basketball Court
+      const court = new THREE.Mesh(new THREE.PlaneGeometry(18, 12), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.5 }));
+      court.rotation.x = -Math.PI / 2;
+      court.position.set(42, 0.05, 32);
+      court.receiveShadow = true;
+      threeScene.add(court);
+
+      // Trees along Bharathi Salai
+      const trunkGeo = new THREE.CylinderGeometry(0.2, 0.35, 2.4, 6);
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+      const leafGeo = new THREE.ConeGeometry(1.5, 2.5, 7);
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.8 });
+
+      [-70, -55, -40, -25, 15, 30, 45, 60, 75].forEach(tx => {
+        const tGroup = new THREE.Group();
+        tGroup.position.set(tx, 0, 45);
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 1.2;
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.y = 2.8;
+        tGroup.add(trunk);
+        tGroup.add(leaf);
+        threeScene.add(tGroup);
+      });
+    }
+
+    function buildThreeBuildings() {
+      EASWARI_BUILDINGS.forEach((bldg) => {
+        const [w, h, d] = bldg.localDim;
+        const group = new THREE.Group();
+        group.position.set(bldg.localPos[0], bldg.localPos[1], bldg.localPos[2]);
+        group.userData = { id: bldg.id, name: bldg.name };
+
+        // 1. Foundation Base Plinth
+        const plinth = new THREE.Mesh(new THREE.BoxGeometry(w + 1.6, 0.5, d + 1.6), new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.7 }));
+        plinth.position.y = 0.25;
+        group.add(plinth);
+
+        // 2. Main Structural Body (Finished 360° Geometry)
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: bldg.healthStatus === 'red' ? 0xfecaca : bldg.healthStatus === 'amber' ? 0xfef3c7 : 0xffffff,
+          roughness: 0.35,
+          metalness: 0.12
+        });
+        const bodyGeo = new THREE.BoxGeometry(w, h, d);
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = h / 2 + 0.5;
+        body.castShadow = true;
+        group.add(body);
+
+        // 3. Subtle Holographic Edge Wireframe Outlines (Cyan/Blue Hologram Aesthetic)
+        const edgeGeo = new THREE.EdgesGeometry(bodyGeo);
+        const edgeMat = new THREE.LineBasicMaterial({
+          color: bldg.healthStatus === 'red' ? 0xf87171 : bldg.healthStatus === 'amber' ? 0xfbbf24 : 0x38bdf8,
+          linewidth: 2,
+          transparent: true,
+          opacity: 0.65
+        });
+        const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+        edges.position.y = h / 2 + 0.5;
+        group.add(edges);
+
+        // 4. Complete 360° Window Stripes on ALL FOUR SIDES (Front, Back, Left, Right)
+        for (let f = 1; f <= Math.min(bldg.floors, 5); f++) {
+          const fy = (h / (bldg.floors + 1)) * f + 0.5;
+          const winMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            roughness: 0.1,
+            metalness: 0.85,
+            transparent: true,
+            opacity: 0.88,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.15
+          });
+
+          // Front Facade (South)
+          const winFront = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.7, 0.06), winMat);
+          winFront.position.set(0, fy, d / 2 + 0.04);
+          group.add(winFront);
+
+          // Back Facade (North - Complete finished 360 backside!)
+          const winBack = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.7, 0.06), winMat);
+          winBack.position.set(0, fy, -d / 2 - 0.04);
+          group.add(winBack);
+
+          // Left Side (West)
+          const winLeft = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, d * 0.88), winMat);
+          winLeft.position.set(-w / 2 - 0.04, fy, 0);
+          group.add(winLeft);
+
+          // Right Side (East)
+          const winRight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, d * 0.88), winMat);
+          winRight.position.set(w / 2 + 0.04, fy, 0);
+          group.add(winRight);
+        }
+
+        // 5. Front Entrance Portico & Support Columns
+        const portico = new THREE.Mesh(new THREE.BoxGeometry(w * 0.35, 0.3, 2.4), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 }));
+        portico.position.set(0, 1.6, d / 2 + 1.2);
+        group.add(portico);
+
+        const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 1.8), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+        p1.position.set(-w * 0.14, 0.8, d / 2 + 2.0);
+        group.add(p1);
+        const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 1.8), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+        p2.position.set(w * 0.14, 0.8, d / 2 + 2.0);
+        group.add(p2);
+
+        // 6. Rear Service / Staircase Tower (Ensures full architectural 360 degree depth)
+        const rearTower = new THREE.Mesh(new THREE.BoxGeometry(w * 0.22, h * 1.05, 1.4), new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.6 }));
+        rearTower.position.set(w * 0.2, h / 2 + 0.5, -d / 2 - 0.7);
+        group.add(rearTower);
+
+        // 7. Roof Slab & Holographic Parapet Edge
+        const roofGeo = new THREE.BoxGeometry(w + 0.4, 0.4, d + 0.4);
+        const roofMat = new THREE.MeshStandardMaterial({
+          color: bldg.healthStatus === 'red' ? 0xef4444 : bldg.healthStatus === 'amber' ? 0xf59e0b : bldg.healthStatus === 'grey' ? 0x64748b : 0x334155,
+          roughness: 0.5
+        });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.y = h + 0.7;
+        group.add(roof);
+
+        const roofEdge = new THREE.LineSegments(new THREE.EdgesGeometry(roofGeo), new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5 }));
+        roofEdge.position.y = h + 0.7;
+        group.add(roofEdge);
+
+        // 8. Rooftop Utilities (HVAC Chillers & Elevator Housing)
+        const hvac = new THREE.Mesh(new THREE.BoxGeometry(w * 0.25, 1.2, d * 0.25), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.4 }));
+        hvac.position.set(-w * 0.2, h + 1.4, -d * 0.2);
+        group.add(hvac);
+
+        // 9. Status Indicator Light / Beacon
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), new THREE.MeshStandardMaterial({
+          color: STATUS_CFG[bldg.healthStatus].hex,
+          emissive: STATUS_CFG[bldg.healthStatus].hex,
+          emissiveIntensity: 1.8
+        }));
+        beacon.position.set(0, h + 1.8, 0);
+        group.add(beacon);
+
+        // 10. Point Light
+        const beaconLight = new THREE.PointLight(STATUS_CFG[bldg.healthStatus].hex, 1.5, 16);
+        beaconLight.position.set(0, h + 2.5, 0);
+        group.add(beaconLight);
+        threeBeaconLights.set(bldg.id, beaconLight);
+
+        threeScene.add(group);
+        threeBuildingMeshes.set(bldg.id, { group, body, beacon, beaconLight, roof, edges });
+      });
+    }
+
+    function animateThree() {
+      requestAnimationFrame(animateThree);
+      if (currentMode === 'operational' && threeControls) {
+        threeControls.update();
+        threeRenderer.render(threeScene, threeCamera);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 5. VIEW MODE SWITCHER (Satellite | Photorealistic 3D | Operational)
+    // -------------------------------------------------------------
+    function switchViewMode(mode) {
+      currentMode = mode;
+
+      const cesiumEl = document.getElementById('cesium-container');
+      const threeEl = document.getElementById('three-container');
+      const badge = document.getElementById('active-mode-badge');
+
+      ['satellite', 'photorealistic', 'operational'].forEach(m => {
+        const btn = document.getElementById(`mode-btn-${m}`);
+        if (m === mode) {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-sky-700 shadow-xs border border-slate-200/60 transition-all flex items-center gap-1.5';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+        }
+      });
+
+      if (mode === 'satellite') {
+        cesiumEl.style.display = 'block';
+        threeEl.style.display = 'none';
+        badge.innerText = 'Satellite (Easwari Focus)';
+
+        if (!cesiumViewer) initCesiumViewer();
+        if (google3DTileset) google3DTileset.show = false;
+        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = true;
+
+        // Auto zoom-fit to SRM Easwari Engineering College Campus Boundary
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0006, 320),
+          orientation: {
+            heading: 0,
+            pitch: Cesium.Math.toRadians(-75), // Focused oblique satellite view
+            roll: 0.0
+          },
+          duration: 1.5
+        });
+
+      } else if (mode === 'photorealistic') {
+        cesiumEl.style.display = 'block';
+        threeEl.style.display = 'none';
+        badge.innerText = 'Photorealistic 3D';
+
+        if (!cesiumViewer) initCesiumViewer();
+        if (google3DTileset) google3DTileset.show = true;
+        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
+
+        flyToEaswariOverview();
+
+      } else if (mode === 'operational') {
+        cesiumEl.style.display = 'none';
+        threeEl.style.display = 'block';
+        badge.innerText = 'Holographic 3D Twin';
+
+        if (satelliteDimMaskEntity) satelliteDimMaskEntity.show = false;
+        if (!threeRenderer) initThreeScene();
+        threeCamera.position.set(0, 95, 105);
+        threeControls.target.set(0, 0, 10);
+      }
+
+      updateOperationalLabels();
+    }
+
+    // -------------------------------------------------------------
+    // 6. PERSPECTIVE & CARDINAL EXPLORATION CONTROLS
+    // -------------------------------------------------------------
+    function setPerspective(perspective) {
+      if (currentMode === 'operational') {
+        if (perspective === 'north' || perspective === 'front') {
+          threeCamera.position.set(0, 24, 75);
+          threeControls.target.set(0, 6, 20);
+        } else if (perspective === 'south' || perspective === 'back') {
+          threeCamera.position.set(0, 24, -35);
+          threeControls.target.set(0, 6, 20);
+        } else if (perspective === 'east' || perspective === 'right') {
+          threeCamera.position.set(65, 24, 20);
+          threeControls.target.set(0, 6, 20);
+        } else if (perspective === 'west' || perspective === 'left') {
+          threeCamera.position.set(-65, 24, 20);
+          threeControls.target.set(0, 6, 20);
+        } else if (perspective === 'top-down') {
+          threeCamera.position.set(0, 140, 15);
+          threeControls.target.set(0, 0, 15);
+        } else if (perspective === 'oblique') {
+          threeCamera.position.set(55, 65, 75);
+          threeControls.target.set(0, 0, 15);
+        }
+        return;
+      }
+
+      if (!cesiumViewer) return;
+
+      const center = Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude, 0);
+
+      if (perspective === 'north') {
+        // Looking North towards Bharathi Salai entrance
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0022, 280),
+          orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 }
+        });
+      } else if (perspective === 'south') {
+        // Looking South toward Bharathi Salai
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude + 0.0022, 280),
+          orientation: { heading: Cesium.Math.toRadians(180), pitch: Cesium.Math.toRadians(-35), roll: 0 }
+        });
+      } else if (perspective === 'east') {
+        // Looking East toward Library & Sports
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude - 0.0025, CAMPUS_CENTER.latitude, 280),
+          orientation: { heading: Cesium.Math.toRadians(90), pitch: Cesium.Math.toRadians(-35), roll: 0 }
+        });
+      } else if (perspective === 'west') {
+        // Looking West toward Mech Block
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude + 0.0025, CAMPUS_CENTER.latitude, 280),
+          orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-35), roll: 0 }
+        });
+      } else if (perspective === 'top-down') {
+        // 90-degree Nadir Satellite View
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude, 380),
+          orientation: { heading: 0, pitch: Cesium.Math.toRadians(-88), roll: 0 }
+        });
+      } else if (perspective === 'oblique') {
+        // 45-degree Angled 3D
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(CAMPUS_CENTER.longitude, CAMPUS_CENTER.latitude - 0.0018, 300),
+          orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-45), roll: 0 }
+        });
+      }
+    }
+
+    function resetCampusCamera() {
+      document.getElementById('building-focus-select').value = 'all';
+      if (currentMode === 'operational') {
+        threeCamera.position.set(0, 95, 105);
+        threeControls.target.set(0, 0, 10);
+      } else {
+        flyToEaswariOverview();
+      }
+      closeBuildingDrawer();
+    }
+
+    function toggleAutoTour() {
+      autoTourActive = !autoTourActive;
+      const btn = document.getElementById('btn-auto-rotate');
+      if (autoTourActive) {
+        btn.classList.add('bg-sky-600', 'text-white');
+        btn.classList.remove('text-slate-600');
+      } else {
+        btn.classList.remove('bg-sky-600', 'text-white');
+        btn.classList.add('text-slate-600');
+      }
+    }
+
+    function toggleOperationalOverlays() {
+      showOverlays = !showOverlays;
+      document.getElementById('labels-container').style.display = showOverlays ? 'block' : 'none';
+      if (cesiumViewer) {
+        cesiumEntities.forEach(e => {
+          e.marker.show = showOverlays;
+          e.ring.show = showOverlays;
+        });
+      }
+      const btn = document.getElementById('btn-overlays-toggle');
+      if (showOverlays) {
+        btn.classList.add('bg-slate-900', 'text-white');
+      } else {
+        btn.classList.remove('bg-slate-900', 'text-white');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 7. BUILDING SELECTION & FACILITY INTELLIGENCE
+    // -------------------------------------------------------------
+    function selectBuilding(bldgId) {
+      selectedBuildingId = bldgId;
+      const bldg = EASWARI_BUILDINGS.find(b => b.id === bldgId);
+      if (!bldg) return;
+
+      document.getElementById('building-focus-select').value = bldgId;
+
+      // Camera Glide to Building
+      if (currentMode === 'operational') {
+        threeControls.target.set(bldg.localPos[0], bldg.localPos[1] + 4, bldg.localPos[2]);
+        threeCamera.position.set(bldg.localPos[0] + 18, bldg.localPos[1] + 28, bldg.localPos[2] + 32);
+      } else if (cesiumViewer) {
+        cesiumViewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat - 0.0006, 110),
+          orientation: {
+            heading: Cesium.Math.toRadians(0),
+            pitch: Cesium.Math.toRadians(-35),
+            roll: 0.0
+          },
+          duration: 1.6
+        });
+      }
+
+      // Populate Drawer
+      document.getElementById('drawer-bldg-id').innerText = bldg.id;
+      document.getElementById('drawer-bldg-name').innerText = bldg.name;
+      document.getElementById('drawer-bldg-category').innerText = bldg.category;
+      document.getElementById('drawer-bldg-coords').innerText = `${bldg.lat.toFixed(4)}° N, ${bldg.lng.toFixed(4)}° E`;
+      document.getElementById('drawer-power').innerText = bldg.powerKw + ' kW';
+      document.getElementById('drawer-temp').innerText = bldg.tempC + ' °C';
+      document.getElementById('drawer-wifi').innerText = bldg.wifiClients + ' clients';
+      document.getElementById('drawer-fire').innerText = bldg.fireReadiness + '%';
+      document.getElementById('drawer-aqi').innerText = bldg.aqi + ' AQI';
+      document.getElementById('drawer-water').innerText = bldg.waterPsi + ' PSI';
+
+      const occRate = Math.round((bldg.occupancy / bldg.capacity) * 100);
+      document.getElementById('drawer-occupancy-text').innerText = `${bldg.occupancy.toLocaleString()} / ${bldg.capacity.toLocaleString()} (${occRate}%)`;
+      document.getElementById('drawer-occupancy-bar').style.width = Math.min(occRate, 100) + '%';
+      document.getElementById('drawer-floors').innerText = `${bldg.floors} Levels (G + ${bldg.floors - 1})`;
+      document.getElementById('drawer-area').innerText = `${bldg.areaSqFt.toLocaleString()} sq.ft`;
+      document.getElementById('drawer-year').innerText = bldg.builtYear;
+
+      // Status Box
+      const sBox = document.getElementById('drawer-status-box');
+      if (bldg.healthStatus === 'red') {
+        sBox.className = 'p-4 rounded-xl border flex items-center justify-between gap-3 bg-red-50 border-red-200 text-red-900';
+        document.getElementById('drawer-status-icon').innerText = '🔴';
+        document.getElementById('drawer-status-title').innerText = 'Critical Emergency Alert';
+        document.getElementById('drawer-status-desc').innerText = 'Immediate intervention required. Emergency staff notified.';
+      } else if (bldg.healthStatus === 'amber') {
+        sBox.className = 'p-4 rounded-xl border flex items-center justify-between gap-3 bg-amber-50 border-amber-200 text-amber-900';
+        document.getElementById('drawer-status-icon').innerText = '🟡';
+        document.getElementById('drawer-status-title').innerText = 'Attention Required';
+        document.getElementById('drawer-status-desc').innerText = 'Sensor anomaly or open maintenance ticket pending review.';
+      } else if (bldg.healthStatus === 'grey') {
+        sBox.className = 'p-4 rounded-xl border flex items-center justify-between gap-3 bg-slate-100 border-slate-200 text-slate-700';
+        document.getElementById('drawer-status-icon').innerText = '⚪';
+        document.getElementById('drawer-status-title').innerText = 'Sensors Uncalibrated';
+        document.getElementById('drawer-status-desc').innerText = 'Facility maintenance in progress.';
+      } else {
+        sBox.className = 'p-4 rounded-xl border flex items-center justify-between gap-3 bg-emerald-50 border-emerald-200 text-emerald-800';
+        document.getElementById('drawer-status-icon').innerText = '🟢';
+        document.getElementById('drawer-status-title').innerText = 'Normal Operational Health';
+        document.getElementById('drawer-status-desc').innerText = 'All structural, electrical, and HVAC subsystems nominal.';
+      }
+
+      // Incidents
+      const bldgIncs = incidents.filter(i => i.buildingId === bldg.id && i.status === 'active');
+      document.getElementById('drawer-incident-count').innerText = bldgIncs.length;
+      const incList = document.getElementById('drawer-incidents-list');
+      if (bldgIncs.length === 0) {
+        incList.innerHTML = '<p class="text-slate-400 italic py-2">No active incident alerts for this building.</p>';
+      } else {
+        incList.innerHTML = bldgIncs.map(inc => `
+          <div class="p-3 rounded-xl border text-xs space-y-1.5 ${inc.severity === 'critical' ? 'bg-red-50 border-red-200 text-red-900' : 'bg-amber-50 border-amber-200 text-amber-900'}">
+            <div class="flex items-center justify-between font-bold">
+              <span>${inc.title}</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-white font-mono uppercase">${inc.category}</span>
+            </div>
+            <p class="text-[11px] text-slate-600">${inc.description}</p>
+            <div class="pt-1 flex items-center justify-between text-[10px]">
+              <span class="text-slate-500">${inc.floorZone}</span>
+              <button onclick="resolveIncident('${inc.id}')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors">Resolve</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Departments
+      document.getElementById('drawer-departments').innerHTML = bldg.departments.map(d => `
+        <li class="bg-slate-50 p-2 rounded-lg border border-slate-200/80 flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0"></span>
+          <span>${d}</span>
+        </li>
+      `).join('');
+
+      // Contacts
+      document.getElementById('drawer-contacts').innerHTML = bldg.contacts.map(c => `
+        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+          <div>
+            <p class="font-bold text-slate-800">${c.name}</p>
+            <p class="text-[11px] text-slate-500">${c.role}</p>
+          </div>
+          <a href="tel:${c.phone}" class="font-mono text-sky-600 font-semibold text-[11px] hover:underline">${c.phone}</a>
+        </div>
+      `).join('');
+
+      document.getElementById('building-drawer').classList.remove('translate-x-full');
+    }
+
+    function closeBuildingDrawer() {
+      document.getElementById('building-drawer').classList.add('translate-x-full');
+      selectedBuildingId = null;
+    }
+
+    function focusCurrentBuilding() {
+      if (selectedBuildingId) selectBuilding(selectedBuildingId);
+    }
+
+    function reportForCurrentBuilding() {
+      openReportModal(selectedBuildingId);
+    }
+
+    function focusBuildingFromSelect(val) {
+      if (val === 'all') resetCampusCamera();
+      else selectBuilding(val);
+    }
+
+    // -------------------------------------------------------------
+    // 8. INCIDENT REPORTING & AUTOMATIC STATUS COLOR UPDATE
+    // -------------------------------------------------------------
+    function openReportModal(preselectBldgId = null) {
+      const select = document.getElementById('modal-building-select');
+      select.innerHTML = EASWARI_BUILDINGS.map(b => `
+        <option value="${b.id}" ${b.id === preselectBldgId ? 'selected' : ''}>${b.name} (${b.id})</option>
+      `).join('');
+      document.getElementById('incident-modal').classList.remove('hidden');
+    }
+
+    function closeReportModal() {
+      document.getElementById('incident-modal').classList.add('hidden');
+    }
+
+    function handleReportSubmit(e) {
+      e.preventDefault();
+      const bldgId = document.getElementById('modal-building-select').value;
+      const floor = document.getElementById('modal-floor').value;
+      const category = document.getElementById('modal-category').value;
+      const title = document.getElementById('modal-title').value;
+      const desc = document.getElementById('modal-desc').value;
+      const reporter = document.getElementById('modal-reporter').value;
+      const severity = document.querySelector('input[name="severity"]:checked').value;
+
+      const targetBldg = EASWARI_BUILDINGS.find(b => b.id === bldgId);
+      const bldgName = targetBldg ? targetBldg.name : 'Campus Building';
+
+      const newInc = {
+        id: 'INC-' + Math.floor(1000 + Math.random() * 9000),
+        buildingId: bldgId,
+        buildingName: bldgName,
+        floorZone: floor,
+        title,
+        description: desc || `${severity.toUpperCase()} ${category} incident reported in ${floor}. Maintenance crew dispatched.`,
+        severity,
+        category,
+        reportedAt: 'Just now',
+        reportedBy: reporter,
+        status: 'active'
+      };
+
+      incidents.unshift(newInc);
+
+      // AUTOMATICALLY UPDATE OPERATIONAL OVERLAY COLOR
+      const newStatus = severity === 'critical' ? 'red' : severity === 'attention' ? 'amber' : 'green';
+      updateBuildingHealth(bldgId, newStatus);
+
+      eventLogs.unshift({
+        id: 'EVT-' + Math.floor(100 + Math.random() * 900),
+        time: new Date().toTimeString().split(' ')[0],
+        bldg: bldgName,
+        msg: `[${severity.toUpperCase()}] ${title} in ${floor}. Reported by ${reporter}.`,
+        severity: newStatus
+      });
+
+      closeReportModal();
+      renderIncidentLists();
+      selectBuilding(bldgId);
+    }
+
+    function resolveIncident(incId) {
+      const inc = incidents.find(i => i.id === incId);
+      if (!inc) return;
+
+      inc.status = 'resolved';
+      const bldgId = inc.buildingId;
+
+      const remaining = incidents.filter(i => i.buildingId === bldgId && i.status === 'active');
+      let nextStatus = 'green';
+      if (remaining.some(i => i.severity === 'critical')) nextStatus = 'red';
+      else if (remaining.some(i => i.severity === 'attention')) nextStatus = 'amber';
+
+      updateBuildingHealth(bldgId, nextStatus);
+
+      eventLogs.unshift({
+        id: 'EVT-' + Math.floor(100 + Math.random() * 900),
+        time: new Date().toTimeString().split(' ')[0],
+        bldg: inc.buildingName,
+        msg: `Incident ${inc.id} resolved. Facility status restored.`,
+        severity: nextStatus
+      });
+
+      renderIncidentLists();
+      if (selectedBuildingId === bldgId) selectBuilding(bldgId);
+    }
+
+    function updateBuildingHealth(bldgId, newStatus) {
+      const bldg = EASWARI_BUILDINGS.find(b => b.id === bldgId);
+      if (!bldg) return;
+      bldg.healthStatus = newStatus;
+
+      // Update Cesium Operational Overlays
+      const cEntity = cesiumEntities.find(e => e.id === bldgId);
+      if (cEntity) {
+        const cColor = STATUS_CFG[newStatus].cesiumColor;
+        cEntity.marker.cylinder.material = cColor.withAlpha(0.85);
+        cEntity.ring.ellipse.material = cColor.withAlpha(0.25);
+        cEntity.ring.ellipse.outlineColor = cColor;
+      }
+
+      // Update Three.js Operational Meshes
+      const tMesh = threeBuildingMeshes.get(bldgId);
+      if (tMesh) {
+        const colorCfg = STATUS_CFG[newStatus];
+        tMesh.body.material.color.setHex(newStatus === 'red' ? 0xfecaca : newStatus === 'amber' ? 0xfef3c7 : 0xffffff);
+        tMesh.beacon.material.color.setHex(colorCfg.hex);
+        tMesh.beaconLight.color.setHex(colorCfg.hex);
+        tMesh.roof.material.color.setHex(newStatus === 'red' ? 0xef4444 : newStatus === 'amber' ? 0xf59e0b : newStatus === 'grey' ? 0x64748b : 0x334155);
+      }
+
+      refreshHealthStats();
+      updateOperationalLabels();
+    }
+
+    function refreshHealthStats() {
+      const total = EASWARI_BUILDINGS.length;
+      const green = EASWARI_BUILDINGS.filter(b => b.healthStatus === 'green').length;
+      const amber = EASWARI_BUILDINGS.filter(b => b.healthStatus === 'amber').length;
+      const red = EASWARI_BUILDINGS.filter(b => b.healthStatus === 'red').length;
+      const grey = EASWARI_BUILDINGS.filter(b => b.healthStatus === 'grey').length;
+
+      document.getElementById('cnt-all').innerText = total;
+      document.getElementById('cnt-green').innerText = green;
+      document.getElementById('cnt-amber').innerText = amber;
+      document.getElementById('cnt-red').innerText = red;
+      document.getElementById('cnt-grey').innerText = grey;
+
+      const score = Math.round(((green * 1.0 + amber * 0.5 + grey * 0.8) / total) * 100);
+      document.getElementById('summary-health-score').innerText = score + '%';
+
+      const activeAlerts = incidents.filter(i => i.status === 'active').length;
+      const ind = document.getElementById('header-incident-indicator');
+      if (activeAlerts > 0) {
+        ind.className = 'w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+      } else {
+        ind.className = 'w-2 h-2 rounded-full bg-emerald-500';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 9. SCREEN-SPACE 3D BILLBOARD LABELS
+    // -------------------------------------------------------------
+    function updateOperationalLabels() {
+      const container = document.getElementById('labels-container');
+      container.innerHTML = '';
+      if (!showOverlays) return;
+
+      EASWARI_BUILDINGS.forEach((bldg) => {
+        if (currentHealthFilter !== 'all' && bldg.healthStatus !== currentHealthFilter) return;
+
+        const label = document.createElement('div');
+        label.className = 'operational-label flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-lg border border-slate-200/90 bg-white/95 text-slate-800 backdrop-blur-md text-xs font-semibold';
+        label.onclick = () => selectBuilding(bldg.id);
+        label.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full ${STATUS_CFG[bldg.healthStatus].css}"></span>
+          <span>${bldg.shortName}</span>
+          <span class="font-mono text-[10px] px-1 py-0.2 rounded bg-slate-100 text-slate-500">${bldg.code}</span>
+        `;
+        label.id = `label-${bldg.id}`;
+        container.appendChild(label);
+      });
+    }
+
+    // Sync label coordinates with camera frame
+    function tickLabelPositions() {
+      requestAnimationFrame(tickLabelPositions);
+      if (!showOverlays) return;
+
+      if (currentMode !== 'operational' && cesiumViewer) {
+        EASWARI_BUILDINGS.forEach(bldg => {
+          const el = document.getElementById(`label-${bldg.id}`);
+          if (!el) return;
+
+          const pos = Cesium.Cartesian3.fromDegrees(bldg.lng, bldg.lat, bldg.heightM + 14);
+          const canvasPos = Cesium.SceneTransforms.wgs84ToWindowCoordinates(cesiumViewer.scene, pos);
+
+          if (canvasPos && canvasPos.x >= 0 && canvasPos.y >= 0 && canvasPos.x <= window.innerWidth && canvasPos.y <= window.innerHeight) {
+            el.style.left = `${canvasPos.x}px`;
+            el.style.top = `${canvasPos.y}px`;
+            el.style.display = 'flex';
+          } else {
+            el.style.display = 'none';
+          }
+        });
+      }
+    }
+    tickLabelPositions();
+
+    // -------------------------------------------------------------
+    // 10. INCIDENTS & SIMULATORS
+    // -------------------------------------------------------------
+    function toggleIncidentLog() {
+      const drawer = document.getElementById('incidents-drawer');
+      if (drawer.classList.contains('translate-x-full')) {
+        renderIncidentLists();
+        drawer.classList.remove('translate-x-full');
+      } else {
+        drawer.classList.add('translate-x-full');
+      }
+    }
+
+    function closeIncidentLog() {
+      document.getElementById('incidents-drawer').classList.add('translate-x-full');
+    }
+
+    function renderIncidentLists() {
+      const activeIncs = incidents.filter(i => i.status === 'active');
+      const container = document.getElementById('incidents-list');
+      if (activeIncs.length === 0) {
+        container.innerHTML = '<div class="text-center py-6 text-slate-400 font-medium">All Facilities Nominal. No active alerts.</div>';
+      } else {
+        container.innerHTML = activeIncs.map(inc => `
+          <div class="p-3.5 rounded-xl border text-xs space-y-2 ${inc.severity === 'critical' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}">
+            <div class="flex items-center justify-between font-bold">
+              <span class="text-slate-900">${inc.title}</span>
+              <span class="font-mono text-[10px] px-1.5 py-0.2 rounded uppercase ${inc.severity === 'critical' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'}">${inc.severity}</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">${inc.description}</p>
+            <div class="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[10px] text-slate-500">
+              <span>${inc.buildingName}</span>
+              <button onclick="resolveIncident('${inc.id}')" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors">Mark Resolved</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const stream = document.getElementById('events-stream-list');
+      stream.innerHTML = eventLogs.map(evt => `
+        <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-start gap-2">
+          <span class="w-2 h-2 rounded-full mt-1.5 ${STATUS_CFG[evt.severity].css}"></span>
+          <div class="flex-1">
+            <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span class="font-bold text-slate-700">${evt.bldg}</span>
+              <span>${evt.time}</span>
+            </div>
+            <p class="text-slate-600 text-[11px] mt-0.5">${evt.msg}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function triggerQuickSimulation(type) {
+      if (type === 'fire') {
+        const bldg = EASWARI_BUILDINGS.find(b => b.id === 'EEC-MAIN-01');
+        incidents.unshift({
+          id: 'SIM-' + Math.floor(100 + Math.random() * 900),
+          buildingId: 'EEC-MAIN-01',
+          buildingName: bldg.name,
+          floorZone: 'Floor 3 - Server Room & CSE Labs',
+          title: 'Optical Heat & Smoke Detector Triggered',
+          description: 'Emergency HVAC isolated. Server room fire suppression pre-action activated.',
+          severity: 'critical',
+          category: 'Fire/Safety',
+          reportedAt: 'Just now',
+          reportedBy: 'IoT Fire Alarm Panel',
+          status: 'active'
+        });
+        updateBuildingHealth('EEC-MAIN-01', 'red');
+        selectBuilding('EEC-MAIN-01');
+      } else if (type === 'power') {
+        incidents.unshift({
+          id: 'SIM-' + Math.floor(100 + Math.random() * 900),
+          buildingId: 'EEC-MECH-02',
+          buildingName: 'Easwari Mechanical & Civil Labs Complex',
+          floorZone: 'Ground Floor - CNC Machine Cell',
+          title: 'Substation Voltage Inversion & Phase Drop',
+          description: 'Phase-B voltage dropped below threshold. Heavy machinery safety cut-off engaged.',
+          severity: 'attention',
+          category: 'Electrical',
+          reportedAt: 'Just now',
+          reportedBy: 'Grid Telemetry Monitor',
+          status: 'active'
+        });
+        updateBuildingHealth('EEC-MECH-02', 'amber');
+        selectBuilding('EEC-MECH-02');
+      } else if (type === 'network') {
+        incidents.unshift({
+          id: 'SIM-' + Math.floor(100 + Math.random() * 900),
+          buildingId: 'EEC-LIB-03',
+          buildingName: 'Easwari Central Library',
+          floorZone: 'Basement - Optical Switch Node',
+          title: 'Core 10Gbps Fiber Backbone Offline',
+          description: 'Optical fiber attenuation critical alert. Secondary failover link engaged.',
+          severity: 'critical',
+          category: 'Network/IT',
+          reportedAt: 'Just now',
+          reportedBy: 'NOC Automated Telemetry',
+          status: 'active'
+        });
+        updateBuildingHealth('EEC-LIB-03', 'red');
+        selectBuilding('EEC-LIB-03');
+      } else if (type === 'reset') {
+        EASWARI_BUILDINGS.forEach(b => {
+          updateBuildingHealth(b.id, b.id === 'EEC-PG-04' ? 'grey' : 'green');
+        });
+        incidents.forEach(i => i.status = 'resolved');
+        resetCampusCamera();
+      }
+      renderIncidentLists();
+    }
+
+    // Health filter
+    function filterByHealth(filter) {
+      currentHealthFilter = filter;
+      ['all', 'green', 'amber', 'red', 'grey'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (f === filter) {
+          btn.className = 'px-2.5 py-1 rounded-full font-semibold transition-all flex items-center gap-1.5 bg-slate-900 text-white shadow-xs';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200';
+        }
+      });
+      updateOperationalLabels();
+    }
+
+    // -------------------------------------------------------------
+    // 11. API KEY MODAL
+    // -------------------------------------------------------------
+    function openApiKeyModal() {
+      document.getElementById('input-google-api-key').value = googleApiKey;
+      document.getElementById('apikey-modal').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apikey-modal').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('input-google-api-key').value.trim();
+      googleApiKey = key;
+      localStorage.setItem('campuspulse_google_maps_key', key);
+      closeApiKeyModal();
+      loadGoogle3DTiles();
+    }
+
+    // -------------------------------------------------------------
+    // 12. HAMBURGER NAVIGATION DRAWER & 5 MODULES SCRIPT
+    // -------------------------------------------------------------
+    const TECHNICIANS = [
+      { id: 'T1', name: 'Er. Rajesh Kumar', trade: 'Electrical', phone: '+91 98401 23091', status: 'Available' },
+      { id: 'T2', name: 'Er. Senthil Nathan', trade: 'HVAC Specialist', phone: '+91 94442 88102', status: 'Dispatched (EEC-LIB-03)' },
+      { id: 'T3', name: 'Er. K. Murugan', trade: 'Plumbing & Hydraulic', phone: '+91 97890 41235', status: 'Available' },
+      { id: 'T4', name: 'Er. Deepa Krishnan', trade: 'Network & IT NOC', phone: '+91 98414 77203', status: 'Available' },
+      { id: 'T5', name: 'Er. Vijay Anand', trade: 'Safety & Fire Marshal', phone: '+91 99403 66190', status: 'Available' }
+    ];
+
+    const INVENTORY = [
+      { name: '500kVA Transformer HT Fuses', category: 'Electrical', stock: 14, min: 4, status: 'Nominal' },
+      { name: 'Danfoss Chiller Expansion Valves', category: 'HVAC', stock: 2, min: 3, status: 'Low Stock' },
+      { name: 'Cat6A Shielded Backbone Cable (305m)', category: 'Network', stock: 8, min: 2, status: 'Nominal' },
+      { name: 'Optical Smoke Detector Heads', category: 'Fire/Safety', stock: 24, min: 10, status: 'Nominal' },
+      { name: '3-Phase Heavy Contactor Relays (63A)', category: 'Electrical', stock: 5, min: 2, status: 'Nominal' }
+    ];
+
+    let currentSosCategory = 'Medical';
+
+    function toggleNavMenu() {
+      const drawer = document.getElementById('nav-drawer');
+      const backdrop = document.getElementById('nav-drawer-backdrop');
+      if (drawer.classList.contains('-translate-x-full')) {
+        drawer.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+        renderNavContent();
+      } else {
+        closeNavMenu();
+      }
+    }
+
+    function closeNavMenu() {
+      document.getElementById('nav-drawer').classList.add('-translate-x-full');
+      document.getElementById('nav-drawer-backdrop').classList.add('hidden');
+    }
+
+    function switchNavTab(tabId) {
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.className = 'nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap text-slate-600 hover:text-slate-900 hover:bg-slate-200/60';
+      });
+      document.querySelectorAll('.nav-tab-content').forEach(c => c.classList.add('hidden'));
+
+      const activeBtn = document.getElementById(`nav-tab-btn-${tabId}`);
+      const activeContent = document.getElementById(`nav-content-${tabId}`);
+      if (activeBtn) activeBtn.className = 'nav-tab-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-sky-600 text-white shadow-xs';
+      if (activeContent) activeContent.classList.remove('hidden');
+    }
+
+    function renderNavContent() {
+      // 1. Health Map list
+      const hList = document.getElementById('nav-health-map-list');
+      if (hList) {
+        hList.innerHTML = EASWARI_BUILDINGS.map(b => `
+          <div onclick="selectBuilding('${b.id}'); closeNavMenu();" class="p-3 bg-white border border-slate-200 hover:border-sky-400 rounded-xl cursor-pointer transition-all flex items-center justify-between">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="font-mono text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded">${b.code}</span>
+                <span class="font-bold text-slate-900 text-xs">${b.shortName}</span>
+              </div>
+              <span class="text-[11px] text-slate-500">${b.powerKw} kW • ${b.tempC} °C • ${b.wifiClients} WiFi</span>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase ${STATUS_CFG[b.healthStatus].css} text-white">
+              ${STATUS_CFG[b.healthStatus].name}
+            </span>
+          </div>
+        `).join('');
+      }
+
+      // 2. Technicians list
+      const tList = document.getElementById('nav-tech-list');
+      if (tList) {
+        tList.innerHTML = TECHNICIANS.map(t => `
+          <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <span class="font-bold text-slate-800">${t.name}</span>
+              <span class="text-[10px] text-slate-400 block">${t.trade} • ${t.phone}</span>
+            </div>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${t.status.includes('Dispatched') ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+              ${t.status}
+            </span>
+          </div>
+        `).join('');
+      }
+
+      // 3. Inventory list
+      const iList = document.getElementById('nav-inventory-list');
+      if (iList) {
+        iList.innerHTML = INVENTORY.map(i => `
+          <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <span class="font-bold text-slate-800">${i.name}</span>
+              <span class="text-[10px] text-slate-400 block">${i.category}</span>
+            </div>
+            <div class="text-right">
+              <span class="font-mono font-bold text-slate-900">${i.stock} in stock</span>
+              <span class="text-[10px] block ${i.status === 'Nominal' ? 'text-emerald-600' : 'text-red-600 font-bold'}">${i.status}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function updateSimCalculations() {
+      const crowd = parseInt(document.getElementById('nav-sim-crowd-slider').value);
+      const staff = parseInt(document.getElementById('nav-sim-staff-slider').value);
+      const gates = parseInt(document.getElementById('nav-sim-gate-slider').value);
+
+      document.getElementById('nav-sim-crowd-val').innerText = `${crowd.toLocaleString()} students`;
+      document.getElementById('nav-sim-staff-val').innerText = `${staff} officers`;
+      document.getElementById('nav-sim-gate-val').innerText = `${gates} gates`;
+
+      const risk = Math.min(95, Math.round((crowd / (staff * 75 + gates * 550)) * 55));
+      const time = ((crowd / (gates * 210)) * 1.6 + (staff < 15 ? 3 : 1)).toFixed(1);
+
+      const riskEl = document.getElementById('nav-sim-risk-val');
+      riskEl.innerText = `${risk}%`;
+      riskEl.className = `text-xl font-bold font-mono mt-1 ${risk > 60 ? 'text-red-600' : 'text-emerald-600'}`;
+
+      document.getElementById('nav-sim-time-val').innerText = `${time} mins`;
+    }
+
+    function setHtmlSosCategory(cat) {
+      currentSosCategory = cat;
+      document.querySelectorAll('.sos-cat-btn').forEach(btn => {
+        if (btn.innerText.includes(cat)) {
+          btn.className = 'sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-red-600 text-white border-red-700';
+        } else {
+          btn.className = 'sos-cat-btn py-1.5 px-3 rounded-lg font-bold border bg-white text-slate-700 border-red-200';
+        }
+      });
+    }
+
+    function broadcastHtmlSos() {
+      const timeStr = new Date().toTimeString().split(' ')[0];
+      const newCard = document.createElement('div');
+      newCard.className = 'p-3 bg-white border border-red-300 rounded-xl space-y-1';
+      newCard.innerHTML = `
+        <div class="flex justify-between font-mono text-[10px] text-red-600 font-bold">
+          <span>SOS-${Math.floor(100 + Math.random() * 900)} • ${currentSosCategory}</span>
+          <span class="text-slate-400">${timeStr}</span>
+        </div>
+        <p class="font-bold text-slate-800">Easwari Main Academic Quadrangle</p>
+        <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-semibold">✓ Dispatched: Easwari Emergency Quick-Reaction Patrol</span>
+      `;
+      document.getElementById('nav-sos-log').prepend(newCard);
+      alert(`Emergency ${currentSosCategory} SOS Broadcast across SRM Easwari Mesh Network. First Responder Unit Dispatched.`);
+    }
+
+    // -------------------------------------------------------------
+    // 13. INITIAL BOOTSTRAP
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      initCesiumViewer();
+      refreshHealthStats();
+      updateOperationalLabels();
+    });
+  </script>
+</body>
+</html>
