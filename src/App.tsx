@@ -30,8 +30,11 @@ import { DeviceIntelligenceDrawer } from './components/ui/DeviceIntelligenceDraw
 import { DeviceIntelligenceMapToggle } from './components/ui/DeviceIntelligenceMapToggle';
 import { HamburgerNavigation } from './components/ui/HamburgerNavigation';
 import { useDeviceIntelligence } from './hooks/useDeviceIntelligence';
+import { PortalProvider, CampusOperationsPortal } from './portal';
 
 export const App: React.FC = () => {
+  // App Mode: Default to the clean Campus Operations & Emergency Response Portal
+  const [activeAppMode, setActiveAppMode] = useState<'portal' | 'digital-twin'>('portal');
   // 1. Campus Data State
   const [buildings, setBuildings] = useState<Building[]>(INITIAL_BUILDINGS);
   const [incidents, setIncidents] = useState<Incident[]>(INITIAL_INCIDENTS);
@@ -334,8 +337,27 @@ export const App: React.FC = () => {
     setWorkOrders((prev) => [newWo, ...prev]);
   }, []);
 
+  // Default View: Clean Campus Operations & Emergency Response Portal
+  if (activeAppMode === 'portal') {
+    return (
+      <PortalProvider>
+        <CampusOperationsPortal onToggle3DView={() => setActiveAppMode('digital-twin')} />
+      </PortalProvider>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-50 overflow-hidden font-sans select-none">
+    <div className="flex flex-col h-screen w-screen bg-slate-50 overflow-hidden font-sans select-none relative">
+      {/* Return to Operations Portal Floating Pill */}
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40">
+        <button
+          onClick={() => setActiveAppMode('portal')}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-full shadow-xl shadow-blue-600/30 border border-blue-400 flex items-center gap-2 transition hover:scale-105"
+        >
+          <span>← Back to Campus Operations Portal</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-blue-800 text-[10px]">Student / Admin</span>
+        </button>
+      </div>
       {/* 1. Light Enterprise Header */}
       <Header
         campusHealthScore={campusHealthScore}
