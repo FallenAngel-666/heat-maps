@@ -179,3 +179,4 @@ npm run build
 ```bash
 npx vercel --prod
 ```
+"# trinetra-os" 
