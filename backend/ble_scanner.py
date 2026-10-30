@@ -1,7 +1,7 @@
 """
 CampusOps - Live Mobile Device Intelligence & Anonymous BLE Detection Module
 Bluetooth Scanner Service using Bleak for Windows 11.
-Includes real-time colorized CMD console streaming and structured web console logs.
+Streams phone and BLE packet detections directly to CMD console & web console.
 """
 
 import asyncio
@@ -12,7 +12,7 @@ import os
 import secrets
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
@@ -41,6 +41,24 @@ C_MAGENTA = "\033[95m"
 C_BLUE = "\033[94m"
 C_WHITE = "\033[97m"
 
+# Standard Bluetooth SIG Public Hardware Vendor IDs (100% Anonymous - zero personal data)
+BLE_VENDOR_MAP = {
+    0x004C: "Apple Device (iPhone / Watch / iOS)",
+    0x0075: "Samsung Galaxy (Mobile / Wearable)",
+    0x00E0: "Google Pixel / Android Phone",
+    0x038F: "Xiaomi / Redmi Mobile",
+    0x0006: "Microsoft (Windows PC / Surface)",
+    0x0059: "Nordic Semiconductor BLE Node",
+    0x0087: "Garmin Smartwatch / Fitness",
+    0x0157: "Anker Soundcore Audio",
+    0x000A: "Qualcomm Wireless Audio",
+    0x0001: "Nokia Mobile",
+    0x02E5: "Espressif IoT Chipset",
+    0x08A9: "OnePlus Mobile Device",
+    0x00D2: "Dialog Semiconductor",
+    0x0499: "Ruptela Telematics"
+}
+
 logger = logging.getLogger("campusops.ble")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
@@ -52,6 +70,7 @@ class AnonymousDetection:
     first_seen: float
     last_seen: float
     last_rssi: int
+    device_type: str = "Mobile Phone / BLE Device"
     packet_count: int = 1
 
 
@@ -71,9 +90,10 @@ class SensorZone:
 class AnonymousBLEScannerManager:
     """
     Manages real-time BLE scanning on Windows laptop adapter.
-    Preserves strict privacy: MAC addresses and device names are never stored or exposed.
+    Preserves strict privacy: MAC addresses and personal names are never stored or exposed.
+    Identifies phone hardware families via standard Bluetooth SIG vendor codes.
     Streams colorized packet events to the CMD console and maintains an in-memory
-    log queue for the website's live console tab.
+    log queue for the website's live console.
     """
 
     def __init__(self, detection_window_seconds: int = 60):
@@ -85,8 +105,8 @@ class AnonymousBLEScannerManager:
         # In-memory anonymous registry: { anon_id: AnonymousDetection }
         self._detections: Dict[str, AnonymousDetection] = {}
         
-        # In-memory circular buffer for the web terminal console (last 150 events)
-        self._recent_logs: deque = deque(maxlen=150)
+        # In-memory circular buffer for the web terminal console (last 180 events)
+        self._recent_logs: deque = deque(maxlen=180)
         
         # Console print throttle per device to prevent flooding the CMD window
         self._last_console_print: Dict[str, float] = {}
@@ -130,36 +150,66 @@ class AnonymousBLEScannerManager:
         hasher = hashlib.sha256()
         hasher.update(self._session_salt)
         hasher.update(raw_address.encode("utf-8"))
-        # Returns a truncated 16-hex-character anonymous identifier
         return f"DEV-{hasher.hexdigest()[:12].upper()}"
 
-    def _format_proximity(self, rssi: int) -> str:
-        """Infers probable physical proximity and device class based on RF signal RSSI."""
-        if rssi >= -65:
+    def _identify_device_type(self, advertisement_data: AdvertisementData, rssi: int) -> str:
+        """
+        Infers device class and vendor anonymously from BLE manufacturer company ID.
+        Never reads personal names or identities.
+        """
+        # Check standard Bluetooth SIG company identifier
+        if advertisement_data.manufacturer_data:
+            for company_id in advertisement_data.manufacturer_data.keys():
+                if company_id in BLE_VENDOR_MAP:
+                    return BLE_VENDOR_MAP[company_id]
+
+        # Check anonymous device class from local name hints if generic
+        if advertisement_data.local_name:
+            ln = advertisement_data.local_name.lower()
+            if any(k in ln for k in ("trex", "watch", "band", "fit", "gt")):
+                return "Smartwatch / Wearable"
+            elif any(k in ln for k in ("buds", "airpods", "headphone", "audio", "speaker")):
+                return "Wireless Audio Peripheral"
+            elif any(k in ln for k in ("phone", "iphone", "galaxy", "pixel", "redmi")):
+                return "Mobile Smartphone"
+
+        # Signal-based inference
+        if rssi >= -68:
             return "Nearby Mobile Phone (< 2.5m)"
-        elif rssi >= -78:
+        elif rssi >= -80:
             return "Mid-Range Mobile Device (2.5m - 8m)"
-        elif rssi >= -88:
-            return "Peripheral / Wearable (8m - 15m)"
+        elif rssi >= -90:
+            return "BLE Peripheral / Wearable (8m - 15m)"
         else:
             return "Boundary RF Signal (> 15m)"
+
+    def _format_distance(self, rssi: int) -> str:
+        """Estimates approximate distance from RSSI."""
+        if rssi >= -60:
+            return "~0.5m - 1.5m (Immediate)"
+        elif rssi >= -72:
+            return "~1.5m - 3.5m (Nearby)"
+        elif rssi >= -84:
+            return "~3.5m - 8.0m (Mid-Range)"
+        else:
+            return "> 8.0m (Far/Boundary)"
 
     def _detection_callback(self, device: BLEDevice, advertisement_data: AdvertisementData) -> None:
         """
         Callback invoked by Bleak whenever a BLE advertisement is captured.
-        Extracts only RSSI and updates anonymous timestamp record.
+        Extracts only RSSI and anonymous vendor class.
         Prints real-time colorized logs to CMD and adds to web console buffer.
         """
         now = time.time()
         self.last_scan_time = now
         self.total_packets_received += 1
         
-        # Compute anonymous ID without storing raw MAC or device name
         anon_id = self._anonymize_address(device.address)
         rssi = advertisement_data.rssi if advertisement_data.rssi is not None else -90
 
         is_new = anon_id not in self._detections
-        proximity = self._format_proximity(rssi)
+        dev_type = self._identify_device_type(advertisement_data, rssi)
+        dist_str = self._format_distance(rssi)
         signal_level = "strong" if rssi >= -70 else "moderate" if rssi >= -85 else "weak"
         time_str = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
@@ -167,6 +217,7 @@ class AnonymousBLEScannerManager:
             rec = self._detections[anon_id]
             rec.last_seen = now
             rec.last_rssi = rssi
+            rec.device_type = dev_type
             rec.packet_count += 1
             packet_num = rec.packet_count
         else:
@@ -175,10 +226,13 @@ class AnonymousBLEScannerManager:
                 first_seen=now,
                 last_seen=now,
                 last_rssi=rssi,
+                device_type=dev_type,
                 packet_count=1
             )
             self._detections[anon_id] = rec
             packet_num = 1
+
+        is_phone = ("Phone" in dev_type or "Mobile" in dev_type or "Apple" in dev_type or "Samsung" in dev_type or "Android" in dev_type or rssi >= -70)
 
         # Add structured log entry for the web console tab
         log_entry = {
@@ -188,16 +242,15 @@ class AnonymousBLEScannerManager:
             "anon_id": anon_id,
             "rssi": rssi,
             "signal_level": signal_level,
-            "proximity_est": proximity,
+            "proximity_est": f"{dev_type} ({dist_str})",
             "packet_count": packet_num,
-            "message": f"Detected mobile beacon: {anon_id} ({rssi} dBm | {proximity})"
+            "message": f"{'New phone/device detected' if is_new else 'BLE packet received'}: {anon_id} | {dev_type} ({rssi} dBm)"
         }
         self._recent_logs.append(log_entry)
 
         # Print colorized stream to CMD console
-        # Always print new discoveries; throttle repeat packet logs per device to 1.5s
         last_print = self._last_console_print.get(anon_id, 0.0)
-        if is_new or (now - last_print > 1.5):
+        if is_new or (now - last_print > 1.2):
             self._last_console_print[anon_id] = now
             
             # Format RSSI with appropriate color
@@ -209,16 +262,20 @@ class AnonymousBLEScannerManager:
                 rssi_str = f"{C_DIM}{rssi:>3} dBm [WEAK]  {C_RESET}"
 
             if is_new:
-                tag = f"{C_GREEN}{C_BOLD}[NEW PHONE DISCOVERED]{C_RESET}"
+                if is_phone:
+                    tag = f"{C_GREEN}{C_BOLD}[NEW PHONE DISCOVERED]{C_RESET}"
+                else:
+                    tag = f"{C_CYAN}{C_BOLD}[NEW BLE DEVICE]     {C_RESET}"
             else:
-                tag = f"{C_CYAN}[BLE ADVERTISEMENT]  {C_RESET}"
+                tag = f"{C_BLUE}[BLE ADVERTISEMENT]  {C_RESET}"
 
             active_count = len(self._detections)
             print(
                 f"{C_DIM}[{time_str}]{C_RESET} {tag} "
                 f"{C_WHITE}{C_BOLD}{anon_id}{C_RESET} | "
                 f"RSSI: {rssi_str} | "
-                f"{C_WHITE}{proximity:<32}{C_RESET} | "
+                f"{C_MAGENTA}{dev_type:<32}{C_RESET} | "
+                f"Dist: {C_WHITE}{dist_str:<18}{C_RESET} | "
                 f"Active in 60s: {C_GREEN}{C_BOLD}{active_count}{C_RESET}"
             )
 
@@ -250,7 +307,7 @@ class AnonymousBLEScannerManager:
                             "signal_level": "weak",
                             "proximity_est": "Sliding Window Expiration",
                             "packet_count": len(expired),
-                            "message": f"Sliding Window Purge: {len(expired)} inactive device(s) expired (>60s). Remaining active: {active_count}"
+                            "message": f"Sliding Window Purge: {len(expired)} inactive phone(s) expired (>60s). Remaining active: {active_count}"
                         }
                         self._recent_logs.append(purge_entry)
 
@@ -273,6 +330,7 @@ class AnonymousBLEScannerManager:
                 print(f"\n{C_CYAN}======================================================================{C_RESET}")
                 print(f"{C_GREEN}{C_BOLD}  CAMPUSOPS - LIVE MOBILE DEVICE INTELLIGENCE CONSOLE (Windows 11){C_RESET}")
                 print(f"  Hardware: Built-in Bluetooth Low Energy (BLE) Adapter")
+                print(f"  Detecting Nearby Smartphones (Apple, Samsung, Google, Xiaomi, BLE)")
                 print(f"  Sliding Window: {self.detection_window} seconds | Privacy: Ephemeral SHA-256")
                 print(f"{C_CYAN}======================================================================{C_RESET}\n")
                 
@@ -287,9 +345,8 @@ class AnonymousBLEScannerManager:
                 self.scanner_status = "active"
                 self.status_message = "Active - Scanning for BLE advertisements in 60s sliding window"
                 logger.info("Bluetooth Low Energy scanner successfully active.")
-                print(f"{C_GREEN}[ONLINE]{C_RESET} BleakScanner listening for nearby mobile devices and BLE beacons...\n")
+                print(f"{C_GREEN}[ONLINE]{C_RESET} BleakScanner listening for nearby mobile phones on 2.4 GHz spectrum...\n")
 
-                # Keep scanner running while self._is_running is True
                 while self._is_running:
                     await asyncio.sleep(1.0)
 
@@ -303,7 +360,6 @@ class AnonymousBLEScannerManager:
                 print(f"\n{C_RED}[ERROR] Bluetooth adapter exception: {e}{C_RESET}")
                 print(f"{C_YELLOW}Retrying in {retry_delay}s... (Ensure Bluetooth is ON in Windows Settings){C_RESET}\n")
                 
-                # Close previous scanner if still open
                 if self._bleak_scanner:
                     try:
                         await self._bleak_scanner.stop()
@@ -323,7 +379,6 @@ class AnonymousBLEScannerManager:
             self.scanner_status = "starting"
             self.status_message = "Starting scanner service..."
             
-            # Start background tasks
             self._scan_task = asyncio.create_task(self._scanner_worker(), name="ble_scanner_worker")
             self._cleanup_task = asyncio.create_task(self._cleanup_loop(), name="ble_cleanup_loop")
             logger.info("AnonymousBLEScannerManager started.")
@@ -386,7 +441,7 @@ class AnonymousBLEScannerManager:
             return self._generate_demo_logs(limit)
         return list(self._recent_logs)[-limit:]
 
-    def _generate_demo_logs(self, limit: int = 30) -> List[dict]:
+    def _generate_demo_logs(self, limit: int = 35) -> List[dict]:
         """Generates realistic simulated packet logs across the 5 campus zones for Demo Mode."""
         now = time.time()
         import random
@@ -397,18 +452,27 @@ class AnonymousBLEScannerManager:
             ("ZONE-HOST-04", "Hostel-3 Courtyard"),
             ("ZONE-CAFE-05", "Student Pavilion")
         ]
+        vendors = [
+            "Apple Device (iPhone / Watch / iOS)",
+            "Samsung Galaxy (Mobile / Wearable)",
+            "Google Pixel / Android Phone",
+            "Xiaomi / Redmi Mobile",
+            "Smartwatch / Wearable",
+            "Wireless Audio Peripheral"
+        ]
         
         sim_logs = []
-        for i in range(min(limit, 25)):
-            t_offset = (limit - i) * 1.8
+        for i in range(min(limit, 30)):
+            t_offset = (limit - i) * 1.5
             t_entry = now - t_offset
             time_str = datetime.fromtimestamp(t_entry).strftime("%H:%M:%S.%f")[:-3]
             zid, zname = random.choice(demo_zones)
+            vname = random.choice(vendors)
             anon_id = f"DEV-{secrets.token_hex(6).upper()}"
-            rssi = random.randint(-88, -58)
-            proximity = self._format_proximity(rssi)
+            rssi = random.randint(-88, -55)
+            dist = self._format_distance(rssi)
             signal_level = "strong" if rssi >= -70 else "moderate" if rssi >= -85 else "weak"
-            is_new = random.random() < 0.25
+            is_new = random.random() < 0.28
 
             sim_logs.append({
                 "id": f"sim-log-{int(t_entry * 1000)}-{i}",
@@ -417,9 +481,9 @@ class AnonymousBLEScannerManager:
                 "anon_id": anon_id,
                 "rssi": rssi,
                 "signal_level": signal_level,
-                "proximity_est": f"{proximity} [{zname}]",
+                "proximity_est": f"{vname} ({dist}) [{zname}]",
                 "packet_count": random.randint(1, 15),
-                "message": f"Demo Signal: {anon_id} at {zname} ({rssi} dBm)"
+                "message": f"Demo Signal: {anon_id} at {zname} ({rssi} dBm | {vname})"
             })
         return sim_logs
 
@@ -449,7 +513,6 @@ class AnonymousBLEScannerManager:
 
         # In Demo Mode: simulate realistic student density across multiple campus buildings
         if self.mode == "demo":
-            # Dynamic time-varying simulation for hackathon demo
             t = now / 4.0
             import math
             demo_main = int(18 + math.sin(t * 0.7) * 7 + math.cos(t * 0.3) * 4)

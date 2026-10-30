@@ -28,6 +28,8 @@ import { IncidentLogDrawer } from './components/ui/IncidentLogDrawer';
 import { BuildingListDrawer } from './components/ui/BuildingListDrawer';
 import { DeviceIntelligenceDrawer } from './components/ui/DeviceIntelligenceDrawer';
 import { DeviceIntelligenceMapToggle } from './components/ui/DeviceIntelligenceMapToggle';
+import { BleTerminalConsole } from './components/ui/BleTerminalConsole';
+import { Terminal, X as CloseIcon } from 'lucide-react';
 import { HamburgerNavigation } from './components/ui/HamburgerNavigation';
 import { useDeviceIntelligence } from './hooks/useDeviceIntelligence';
 
@@ -63,6 +65,7 @@ export const App: React.FC = () => {
   // 5. LIVE DEVICE INTELLIGENCE STATE (Anonymous Bluetooth Device Detection)
   const [isDeviceIntelligenceEnabled, setIsDeviceIntelligenceEnabled] = useState<boolean>(true);
   const [isDeviceIntelligenceDrawerOpen, setIsDeviceIntelligenceDrawerOpen] = useState<boolean>(false);
+  const [isBottomTerminalOpen, setIsBottomTerminalOpen] = useState<boolean>(false);
   const [deviceDrawerTab, setDeviceDrawerTab] = useState<'telemetry' | 'console'>('telemetry');
 
   // Check if any drawer, modal, or options panel is currently open
