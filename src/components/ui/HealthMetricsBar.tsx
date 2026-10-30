@@ -25,7 +25,7 @@ export const HealthMetricsBar: React.FC<HealthMetricsBarProps> = ({
   const totalPower = buildings.reduce((acc, b) => acc + b.metrics.powerKw, 0).toFixed(1);
 
   return (
-    <div className="relative z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none shadow-2xs">
+    <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 px-4 md:px-6 py-2 flex flex-wrap items-center justify-between gap-3 text-xs select-none">
       {/* RAG Health Status Segmented Pills */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
         <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-1">

@@ -8,6 +8,7 @@ interface DeviceIntelligence3DProps {
   zones: SensorZoneData[];
   mode: ScannerMode;
   isActive: boolean;
+  showLabels?: boolean;
   onSelectZone?: (zone: SensorZoneData) => void;
 }
 
@@ -15,8 +16,9 @@ interface DeviceIntelligence3DProps {
 const SensorZoneNode: React.FC<{
   zone: SensorZoneData;
   mode: ScannerMode;
+  showLabels?: boolean;
   onSelect?: () => void;
-}> = ({ zone, mode, onSelect }) => {
+}> = ({ zone, mode, showLabels = true, onSelect }) => {
   const [posX, posY, posZ] = zone.position_3d;
   const radius = zone.coverage_radius;
   
@@ -144,62 +146,63 @@ const SensorZoneNode: React.FC<{
         />
       </group>
 
-      {/* 4. High-Visibility Floating 3D Billboard HUD (Properly bounded z-index) */}
-      <Html
-        position={[0, 4.4, 0]}
-        center
-        distanceFactor={50}
-        zIndexRange={[10, 0]}
-        occlude
-        className="pointer-events-auto select-none"
-      >
-        <div 
-          onClick={onSelect}
-          className="cursor-pointer group flex flex-col items-center transform hover:scale-105 transition-transform"
+      {/* 4. High-Visibility Floating 3D Billboard HUD (hidden when drawers are open) */}
+      {showLabels && (
+        <Html
+          position={[0, 4.4, 0]}
+          center
+          distanceFactor={65}
+          zIndexRange={[10, 0]}
+          className="pointer-events-auto select-none"
         >
-          {/* Main Sensor Pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/90 text-white border border-red-500/80 shadow-2xl backdrop-blur-md ring-2 ring-red-500/30">
-            {/* Blinking Live Indicator */}
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-80"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-            </span>
-
-            {/* Live Detected BLE Device Counter */}
-            <div className="flex items-baseline gap-1 font-mono">
-              <span className="text-base font-extrabold text-white tracking-tight">
-                {zone.detected_devices}
+          <div 
+            onClick={onSelect}
+            className="cursor-pointer group flex flex-col items-center transform hover:scale-105 transition-transform"
+          >
+            {/* Main Sensor Pill */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/90 text-white border border-red-500/80 shadow-2xl backdrop-blur-md ring-2 ring-red-500/30">
+              {/* Blinking Live Indicator */}
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-80"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
-              <span className="text-[11px] font-semibold text-red-300 uppercase">
-                BLE Devices
+
+              {/* Live Detected BLE Device Counter */}
+              <div className="flex items-baseline gap-1 font-mono">
+                <span className="text-base font-extrabold text-white tracking-tight">
+                  {zone.detected_devices}
+                </span>
+                <span className="text-[11px] font-semibold text-red-300 uppercase">
+                  BLE Devices
+                </span>
+              </div>
+
+              {/* Density Tag */}
+              <span 
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
+                style={{ backgroundColor: densityColor }}
+              >
+                {zone.density_status}
               </span>
             </div>
 
-            {/* Density Tag */}
-            <span 
-              className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-white"
-              style={{ backgroundColor: densityColor }}
-            >
-              {zone.density_status}
-            </span>
+            {/* Subtitle / Coverage Badge */}
+            <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900/85 text-[10px] text-slate-300 border border-slate-700/60 shadow-md">
+              <span className="text-red-400 font-bold">
+                {zone.is_physical_sensor ? '📡 LAPTOP BLE SCANNER' : '📡 ZONE NODE'}
+              </span>
+              <span className="text-slate-500">•</span>
+              <span>~{Math.round(radius)}m Coverage</span>
+              {mode === 'demo' && !zone.is_physical_sensor && (
+                <>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-amber-400 font-mono">SIMULATED</span>
+                </>
+              )}
+            </div>
           </div>
-
-          {/* Subtitle / Coverage Badge */}
-          <div className="mt-1 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900/85 text-[10px] text-slate-300 border border-slate-700/60 shadow-md">
-            <span className="text-red-400 font-bold">
-              {zone.is_physical_sensor ? '📡 LAPTOP BLE SCANNER' : '📡 ZONE NODE'}
-            </span>
-            <span className="text-slate-500">•</span>
-            <span>~{Math.round(radius)}m Coverage</span>
-            {mode === 'demo' && !zone.is_physical_sensor && (
-              <>
-                <span className="text-slate-500">•</span>
-                <span className="text-amber-400 font-mono">SIMULATED</span>
-              </>
-            )}
-          </div>
-        </div>
-      </Html>
+        </Html>
+      )}
     </group>
   );
 };
@@ -208,6 +211,7 @@ export const DeviceIntelligence3D: React.FC<DeviceIntelligence3DProps> = ({
   zones,
   mode,
   isActive,
+  showLabels = true,
   onSelectZone
 }) => {
   if (!isActive || !zones || zones.length === 0) return null;
@@ -219,6 +223,7 @@ export const DeviceIntelligence3D: React.FC<DeviceIntelligence3DProps> = ({
           key={zone.zone_id}
           zone={zone}
           mode={mode}
+          showLabels={showLabels}
           onSelect={() => onSelectZone?.(zone)}
         />
       ))}

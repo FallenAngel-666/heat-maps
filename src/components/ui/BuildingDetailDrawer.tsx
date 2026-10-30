@@ -81,7 +81,7 @@ export const BuildingDetailDrawer: React.FC<BuildingDetailDrawerProps> = ({
   const occupancyRate = Math.round((building.currentOccupancy / building.capacity) * 100);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-transform duration-300 select-none">
+    <div className="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-white/98 backdrop-blur-xl border-l border-slate-200 shadow-2xl z-40 flex flex-col transition-transform duration-300 select-none">
       {/* Top Header */}
       <div className="p-5 border-b border-slate-200/80 flex items-start justify-between gap-3 bg-slate-50/50">
         <div>
