@@ -2250,10 +2250,27 @@
     // -------------------------------------------------------------
     // 9. SCREEN-SPACE 3D BILLBOARD LABELS
     // -------------------------------------------------------------
+    function isAnyDrawerOrModalOpen() {
+      const bldgDrawer = document.getElementById('building-drawer');
+      const incDrawer = document.getElementById('incidents-drawer');
+      const incModal = document.getElementById('incident-modal');
+      const apiModal = document.getElementById('apikey-modal');
+      const navDrawer = document.getElementById('nav-menu-drawer');
+      const bleDrawer = document.getElementById('device-intelligence-drawer');
+
+      if (bldgDrawer && !bldgDrawer.classList.contains('translate-x-full')) return true;
+      if (incDrawer && !incDrawer.classList.contains('translate-x-full')) return true;
+      if (incModal && !incModal.classList.contains('hidden')) return true;
+      if (apiModal && !apiModal.classList.contains('hidden')) return true;
+      if (navDrawer && !navDrawer.classList.contains('-translate-x-full')) return true;
+      if (bleDrawer && !bleDrawer.classList.contains('translate-x-full')) return true;
+      return false;
+    }
+
     function updateOperationalLabels() {
       const container = document.getElementById('labels-container');
       container.innerHTML = '';
-      if (!showOverlays) return;
+      if (!showOverlays || isAnyDrawerOrModalOpen()) return;
 
       EASWARI_BUILDINGS.forEach((bldg) => {
         if (currentHealthFilter !== 'all' && bldg.healthStatus !== currentHealthFilter) return;
@@ -2274,7 +2291,13 @@
     // Sync label coordinates with camera frame
     function tickLabelPositions() {
       requestAnimationFrame(tickLabelPositions);
-      if (!showOverlays) return;
+      const container = document.getElementById('labels-container');
+      if (isAnyDrawerOrModalOpen() || !showOverlays) {
+        if (container) container.style.display = 'none';
+        return;
+      } else {
+        if (container) container.style.display = 'block';
+      }
 
       if (currentMode !== 'operational' && cesiumViewer) {
         EASWARI_BUILDINGS.forEach(bldg => {
